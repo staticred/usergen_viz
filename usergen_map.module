@@ -1,0 +1,1158 @@
+<?php
+/** user generated mapping tool **/
+/*
+ TODO: Find a way to make use of nodereference fields -- will have to find a way to pull these fields in with meaningful identifiers.  This could be tricky on sites with a large amount of nodes and node references.
+ TODO: Investigate more efficient ways to allow for more than one type of location field in the query.  Currently, the database starts suffering performance hits when a second location field is used in the query.
+    ^-- Here's a wacky idea - run the query twice.  It's the same amount of data, regardless.
+ TODO: Allow for more than one filter criteria through AHAH.
+
+ */
+
+// Include common functions.
+require_once("includes/common.inc.php");
+
+
+/**
+ * Implements hook_menu().
+ *
+ * Reserves aliases/paths within Drupal, and adds menu items
+ * to admin page, etc.
+ *
+ * @return array Menu items for Drupal's menu system.
+ */
+function usergen_map_menu() {
+
+  $items['admin/content/usergen_map'] = array(
+    'title' => 'User Generated Mapping',
+    'description' => 'This allows you to configure default settings for the user-generated mapping tool.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('usergen_map_admin'),
+    'access arguments' => array('administer_usergen_map'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $details = variable_get('usergen_map_details', array());
+  $items['usergen/map/render'] = array(
+   'title' => 'Map Results',
+   'description' => 'Pages that match your selected criteria are listed below.',
+   'page callback' => 'usergen_map_resultpage',
+   'page arguments' => array(1),
+   'access arguments' => array('usergen_generate_maps'),
+   'type' => MENU_NORMAL_ITEM,
+  );
+  $items['usergen/map'] = array(
+    'title'=> (!empty($details['usergen_map_title']))
+          ? $details['usergen_map_title']
+          : 'User-generated mapping',
+    'page callback' => 'usergen_map_defaultpage',
+    'access arguments' => array('usergen_generate_maps'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['usergen/map/save'] = array(
+    'title'=>'',
+    'page callback' => 'usergen_map_save',
+    'page arguments' => $_REQUEST,
+    'access arguments' => array('usergen_save_maps'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['usergen/map/list'] = array(
+    'title' => 'Saved maps',
+    'page callback' => 'usergen_map_list',
+    'access arguments' => array('usergen_save_maps'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['usergen/map/remove'] = array(
+    'title'=>'',
+    'page callback' => 'usergen_map_remove',
+    'page arguments' => $_REQUEST,
+    'access arguments' => array('usergen_delete_maps'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+
+
+}
+
+/*
+//!TODO for future AHAH use
+function usergen_map_addfield($delta, $field, $action) {
+  //set arrays for our messages
+  $errors = array();
+  $messages = array();
+  // The form is generated in an include file which we need to include manually.
+  include_once 'modules/node/node.pages.inc';
+  // We're starting in step #3, preparing for #4.
+  $form_state = array('storage' => NULL, 'submitted' => TRUE);
+  $form_build_id = $_POST['form_build_id'];
+  // Step #4.
+  $form = form_get_cache($form_build_id, $form_state);
+
+  // Preparing for #5.
+  $args = $form['#parameters'];
+  $form_id = array_shift($args);
+  $form_state['post'] = $form['#post'] = $_POST;
+  $form['#programmed'] = $form['#redirect'] = FALSE;
+
+  if($action != 'corevideo_new_upload_submit' && $action != 'corevideo_remove_video'){
+    // Step #5.
+    drupal_process_form($form_id, $form, $form_state);
+    //  Step #6 and #7 and #8.
+    $form = drupal_rebuild_form($form_id, $form_state, $args, $form_build_id);
+    // ... [steps to retrieve, process and rebuild the form] ...
+    // we now have a $form variable containing the
+    // rebuilt form
+
+    //if our field was put into a group, we need to find the fieldsets that contain it, if any
+    //go through the form array recursively to find our field
+    //once we find the path to our form we'll store it as $formpath for the rest of the calculations
+    $path = corevideofield_cck_walker($form, $field);
+
+    $formpath = $form;
+    for($i=0; $i<count($path); $i++){
+      $formpath = $formpath[$path[$i]];
+    }
+  }
+ */
+
+
+/**
+  * Adds help string to Drupal's admin pages.
+  *
+  * @return string Help text to display.
+  */
+function usergen_map_help($path, $arg) {
+
+  $output = "";
+
+  switch ($path) {
+
+    case 'admin/help#usergen_map':
+      $output = '<p>' . t("Allows users to generate maps from node field data.") . '</p>';
+
+    break;
+
+    return $output;
+
+  }
+
+} // end usergen_map_help();
+
+
+/**
+  * admin form for usergen_map.
+  *
+  * @return array returns form to Drupal for rendering.
+  */
+function usergen_map_admin() {
+  global $base_url;
+  $form = array();
+
+  $form['usergen_map_details'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('General Details'),
+    '#description' => t('Configures general display settings. You can access user generated maps at <a href="' . url('usergen/map') . '">' . $base_url . url('usergen/map') . '</a>'),
+    '#tree' => TRUE,
+  );
+
+  $details = variable_get('usergen_map_details', array());
+  $form['usergen_map_details']['usergen_map_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Label'),
+    '#default_value' => (!empty($details['usergen_map_title']))
+                    ? $details['usergen_map_title']
+                    : t('User-generated mapping.'),
+    '#description' => t('Label to be displayed on the page.'),
+    '#required' => FALSE,
+  );
+
+  $helptext = variable_get('usergen_map_helptext', array());
+  $form['usergen_map_details']['usergen_map_helptext']['text'] = array(
+    '#type' => 'textarea',
+    '#title' => t('On-screen help'),
+    '#description' => t('Help text to display to the user'),
+    '#default_value' => (!empty($details['usergen_map_helptext']['text']))
+                  ? $details['usergen_map_helptext']['text']
+                  : t('Build a map from site contents using the data sources and filters below.'),
+    '#format' => isset($details['format']) ? $details['format'] : NULL,
+
+  );
+//   $form['usergen_map_details']['usergen_map_helptext']['format'] = filter_form();
+
+  // let's get a list of location fields to use as a data source.
+  $loc_fields = array();
+  $fields = usergenviz_getfields('', 'location');
+    
+  foreach ($fields as $field) {
+  
+    $field_info = field_info_instance('node', $field['field_name'], $field['type_name']);
+    $loc_fields[$field['field_name']] = $field_info['label'];
+  }
+
+  // and add a configuration option to the settings page for it.
+  $form['fields'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Data Sources and Filtering'),
+    '#description' => t('Select one or more of the following to expose to users as sources of location data.'),
+  );
+
+  $form['fields']['usergen_map_datasources'] = array(
+    '#type' => 'select',
+    '#title' => t('Data Sources'),
+    '#description' => t(''),
+    '#options' => $loc_fields,
+    '#default_value' => variable_get('usergen_map_datasources', array()),
+    '#multiple' => TRUE,
+    '#attributes' => array('size' => 4),
+    '#weight' => 1,
+  );
+
+
+  $content_types = array();
+  $types = usergenviz_getcontenttypes();
+
+  foreach ($types as $key => $type) {  
+
+    if (isset($type['fields'])) {
+      foreach ($type['fields'] as $field_type => $field) {
+        if ($field['type'] == 'location') {
+          $content_types[$key] = $type['label'];;  
+        }
+      } // end foreach
+    }
+
+  } // end foreach
+
+  $form['fields']['usergen_map_contenttypes'] = array(
+    '#type' => 'select',
+    '#title' => t('Content types'),
+    '#description' => t('Select the content type(s) you want to map'),
+    '#options' => $content_types,
+    '#default_value' => variable_get('usergen_map_contenttypes', array()),
+    '#multiple' => TRUE,
+    '#attributes' => array('size' => 4),
+    '#weight' => 2,
+  );
+
+  $filter_fields = array();
+  $all_fields = usergenviz_getfields();
+  foreach ($all_fields as $field) {
+    $field_info = field_info_instance('node', $field['field_name'], $field['type_name']);
+    $filter_fields[$field['field_name']] = "{$field_info['label']} ({$field['type']}: {$field['field_name']})";
+    asort($filter_fields);
+  }
+
+  $form['fields']['usergen_map_filterfields'] = array(
+    '#type' => 'select',
+    '#title' => t('Additional fields to filter by'),
+    '#description' => t('Select the additional fields you want users to use'),
+    '#options' => $filter_fields,
+    '#default_value' => variable_get('usergen_map_filterfields', array()),
+    '#multiple' => TRUE,
+    '#attributes' => array('size' => 4),
+    '#weight' => 10,
+  );
+
+  return system_settings_form($form);
+
+
+} // end usergen_map_admin();
+
+/**
+  * User permissions for module.
+  *
+  * @return array Array of permissions.
+  */
+function usergen_map_permission() {
+  return array(
+    'usergen_generate_maps' => array(
+      'title' => t('Generate User Maps'),
+      'description' => t('Generate maps using site data.'),
+    ), 
+    'usergen_save_maps'=> array(
+      'title' => t('Save user maps'),
+      'description' => t('This gives the specified group permissions to save generated maps.'),
+    ), 
+    'administer_usergen_map' => array(
+      'title' => t('Administer user maps'),
+      'description' => t('Gives permission for the user-generated maps configuration page'),
+    ), 
+    'usergen_delete_maps' => array(
+      'title' => t('Delete maps'),
+      'description' => t('Allows users to delete their own saved maps.'),
+    ),
+  );
+} // end usergen_map_perm()
+
+
+/**
+  * get back field information for a specific kind of field
+  *
+  * @return mixed array of field data or FALSE if no data found
+  */
+function usergen_map_get_fields_of_type($field_type='location', $column_name='lid') {
+  $content_types = usergenviz_getcontenttypes();
+  $ret_fields = array();
+
+  foreach ($content_types as $type) {
+    foreach ($type['fields'] as $field) {
+      if ($field['type'] == $field_type) {
+        // get column information about the field
+        $field_info = usergenviz_getfields($field['field_name']);
+        $field_db_info = content_database_info($field_info);
+
+        // populate an array that we can return
+        $ret_fields[$type['type']][$field['field_name']]['name'] = $field['widget']['label'];
+        $ret_fields[$type['type']][$field['field_name']]['type'] = $field['type'];
+        $ret_fields[$type['type']][$field['field_name']]['table'] = $field_db_info['table'];
+        $ret_fields[$type['type']][$field['field_name']]['column'] = $field_db_info['columns'][$column_name]['column'];
+
+      } // end if
+    } // end foreach
+  } // end foreach
+
+  // check that we got back some data.
+  if (sizeof($ret_fields) > 0) {
+    return $ret_fields;
+  }
+  else {
+    return FALSE;
+  }
+
+} // end get_location_fields();
+
+
+/**
+  * retrieves data for the specified criteria
+  *
+  * @param content_fields array an array of content types to pull
+  * @param location_field string the location field to filter by.  Only one field can be used for the join. Multiple fields incurs a heavy performance penalty.
+  * @param filters array additional WHERE conditionals
+  * @return mixed returns array of objects or FALSE if no films found.
+  */
+function usergen_map_retrieve_data($content_fields, $location_field, $filters = '', $location = '') {
+
+  // we need to get some more info about the fields to do the DB lookup properly;
+  $location_flds = usergenviz_getfields($location_field);
+
+//  var_dump($location_flds);  
+//  $location_info = content_database_info($location_flds);
+  
+  $location_info = $location_flds['storage'];
+  
+  $location_table = array_keys($location_info['details']['sql']['FIELD_LOAD_CURRENT']);
+  $location_column = $location_info['details']['sql']['FIELD_LOAD_CURRENT'][$location_table[0]]['lid'];
+
+
+  // get a list of films and shooting locations for a specific date range.
+  if ($endyear == '') {
+    $endyear = date("Y");
+  }
+
+  // sanitize user input
+  $place = mysql_real_escape_string($location);
+
+  // let's get all the locations.
+  $query = "
+  select
+    node.nid,
+    node_revision.title,
+    field_data_body.body_value,
+    location.lid,
+    location.name,
+    location.city,
+    location.latitude,
+    location.longitude
+  from
+    node,
+    node_revision,
+    location,
+    field_data_body,
+    {$location_table[0]}
+  where
+    node.type = '" . mysql_real_escape_string($content_fields) . "'
+    and node.status = 1
+    and location.lid = {$location_column}
+    and node.nid = {$location_table[0]}.entity_id
+    and node_revision.nid = {$location_table[0]}.entity_id
+    and field_data_body.entity_id = node_revision.nid
+    and location.latitude <> 0 ";
+  if (function_exists('i18n_get_lang')) {
+  $query .= "
+    and node.language = '" . i18n_get_lang() . "'";
+  }
+  $query .= "
+  order by node_revision.title";
+
+  $results = db_query($query);
+
+  $filter_match = array();
+
+  // holding spot for matching nodes.
+  $nodes = array();
+  $numrecords = 0;
+
+  // ok, work through the data
+  while ($record = $results->fetchObject()) {
+
+    $filters_keys = array_keys($filters);
+
+    // if we were passed an array of filters, let's work through them.
+    if (is_array($filters) && sizeof($filters > 0) && $filters[$filters_keys[0]]['name'] <> NULL) {
+      // get DB information for all the fields
+      foreach ($filters as $key => $filter) {
+        $filter_info = usergenviz_getfields($key);
+        $filter_columns = $filter_info['columns'];
+        $filter_keys = array_keys($filter_info['columns']);
+        $filter_column = $filter_keys[0];
+        $table_info = content_database_info($filter_info);
+        $filters[$key]['field_name'] = $filter_info['widget']['label'];
+        $filters[$key]['db_table'] = $table_info['table'];
+        $filters[$key]['db_column'] = $table_info['table'] . "." . $table_info['columns'][$filter_column]['column'];
+      }
+
+      $query = "
+        select
+      ";
+      $i=0;
+      foreach ($filters as $filter) {
+        if ($i>0) {
+          $query .= ", ";
+        }
+        $query .= "{$filter['db_table']}.nid ";
+        $i++;
+      }
+      $i=0;
+      $query .= " from ";
+      foreach ($filters as $filter) {
+        if ($i>0) {
+          $query .= ", ";
+        }
+        $query .= "{$filter['db_table']} ";
+        $i++;
+      }
+      $i=0;
+
+      $query .= " where ";
+      foreach ($filters as $key => $filter) {
+        if ($i>0) {
+          $query .= " and ";
+        }
+        $query .= "
+          {$filter['db_table']}.nid = {$record->nid}
+        and
+          {$filter['db_column']} " . mysql_real_escape_string($filter['operator']) . " '" . mysql_real_escape_string($filter['value']) . "'";
+      }
+        $r = db_query($query);
+
+        while ($row = db_fetch_object($r)) {
+          $nodes[$record->lid]['title'] = $record->title;
+          if ($record->body <> '') {
+            $nodes[$record->lid]['description'] = substr($record->body, 0, 250) . "...";
+          }
+          else {
+            $nodes[$record->lid]['description'] = t('No summary available');
+          }
+          $nodes[$record->lid]['nid'] = $record->nid;
+          $nodes[$record->lid]['lid'] = $record->lid;
+          $nodes[$record->lid]['location'] = $record->name;
+          $nodes[$record->lid]['city'] = $record->city;
+          $nodes[$record->lid]['latitude'] = $record->latitude;
+          $nodes[$record->lid]['longitude'] = $record->longitude;
+        }
+
+  }
+  else {
+    $nodes[$record->lid]['title'] = $record->title;
+    $nodes[$record->lid]['body'] = $record->body;
+    $nodes[$record->lid]['nid'] = $record->nid;
+    $nodes[$record->lid]['lid'] = $record->lid;
+    $nodes[$record->lid]['location'] = $record->name;
+    $nodes[$record->lid]['city'] = $record->city;
+    $nodes[$record->lid]['latitude'] = $record->latitude;
+    $nodes[$record->lid]['longitude'] = $record->longitude;
+  }
+  }
+    if (sizeof($nodes) > 0) {
+      return $nodes;
+    }
+    else {
+      return FALSE;
+    }
+
+} // end usergen_map_retrieve_data();
+
+/**
+  * Builds the user-generated criteria form.
+  *
+  * @return array Array for the Form API to process.
+  */
+function usergen_map_form($form, &$form_state) {
+
+  // set up operators for form use.
+  $num_operators = array(
+    '<' => t('Less than'),
+    '>' => t('More than'),
+    '<=' => t('Less than or equal to'),
+    '>=' => t('Greater than or equal to'),
+    '=' => t('Equal to'),
+    '<>' => t('Not equal to'),
+  );
+  $str_operators = array(
+    '=' => t('Equal to'),
+    'LIKE' => t('Contains'),
+    'NOT LIKE' => t('Does not contain'),
+  );
+
+  // get available content types
+  $ugm_config['content_types'] = variable_get('usergen_map_contenttypes', array());
+  $contenttypes = array();
+  $alltypes = usergenviz_getcontenttypes();
+  foreach ($ugm_config['content_types'] as $type) {
+    $contenttypes[$type] = $alltypes[$type]['label'];
+  }
+
+  // get available data sources
+  $ugm_config['data_sources'] = variable_get('usergen_map_datasources', array());
+  foreach ($ugm_config['data_sources'] as $datasource) {
+    $field = field_info_field($datasource);
+    $field_info = field_info_instance('node', $field['field_name'], $field['type_name']);
+    $datasources[$field['field_name']] = "{$field_info['label']} ({$field_info['widget']['type']})";
+  }
+
+  // get available filter options
+  $filters = array();
+  $ugm_config['filters'] = variable_get('usergen_map_filterfields', array());
+  foreach ($ugm_config['filters'] as $filter) {
+    $field = field_info_field($filter);
+    $field_info = field_info_instance('node', $field['field_name'], $field['type_name']);
+    $filters[$field['field_name']] = "{$field_info['label']} ({$field_info['widget']['type']})";
+  }
+
+  $form = array();
+
+  // we have to pass along the query parameters for the results
+  if (isset($_REQUEST['sources'])) {
+    $params['sources'] = $_REQUEST['sources'];
+  }
+  if (isset($_REQUEST['types'])) {
+    $params['types'] = $_REQUEST['types'];
+  }
+  if (isset($_REQUEST['filter'])) {
+    $params['filter'] = $_REQUEST['filter'];
+  }
+  if (isset($_REQUEST['shownodes'])) {
+    $params['shownodes'] = $_REQUEST['shownodes'];
+  }
+
+  /**
+    * we want to redirect to the results page; otherwise the form will just reappear.
+    * this is a workaround for how Drupal uses the Form API, which is generally for
+    * modifying data in the database.
+    *
+    * one gotcha with this approach is that it uses GET, rather than POST, so we have to
+    * be careful what we expose to the end user.
+    */
+//  $form['#redirect'] = array('usergen/map/render', $params);
+
+  $form_state['redirect'] = array('usergen/map/render/', array('query' => $params));
+
+  $form['datasources'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Data Sources'),
+    '#description' => t('Select one of the following fields to query.'),
+  );
+
+  // give the user a list of data sources (location fields) to select from
+  // we can only use one, as multiple location fields incurs a huge database
+  // penalty.
+
+  // !TODO: Figure out if the performance penalty can be worked around.
+  $datakeys = array_keys($datasources);
+  $form['datasources']['sources'] = array(
+    '#type' => 'select',
+    '#title' => t('Sources'),
+    '#options' => $datasources,
+    '#default_value' => $datakeys[0],
+    '#attributes' => array('size' => 4),
+    '#size' => '1',
+  );
+
+  $form['contenttypes'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Filter by content type'),
+    '#description' => t('Returns pages for the selected content types.'),
+  );
+
+  $contentkeys = array_keys($contenttypes);
+  // give the user a list of content types to select from.
+  if (sizeof($contenttypes) > 1) {
+    $form['contenttypes']['types'] = array(
+      '#type' => 'select',
+      '#title' => t('Content types'),
+      '#options' => $contenttypes,
+      '#attributes' => array('size' => 4),
+      '#default_value' => $contentkeys[0],
+      '#size' => 1,
+    );
+  }
+  else {
+    // only one of them, but we're still dealing with an array.
+    foreach ($contenttypes as $key => $val) {
+      // if there's only one, there's no sense putting it in a select box.
+      // just tell the user what they should expect to get back.
+      $form['contenttypes']['contenttype'] = array(
+        '#value' => t('<p>Results will be returned for ' . $val . ' pages</p>'),
+      );
+      $form['contenttypes']['types'] = array(
+        '#type' => 'hidden',
+        '#value' => $key,
+      );
+    }
+  }
+
+  // give user option to show list of matching nodes (or not).
+  $form['contenttypes']['shownodes'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show list of matching pages'),
+    '#description' => t('If enabled, this will show a list of pages plotted on the map, with links to the individual page.'),
+    '#default_value' => 1,
+  );
+
+
+  $form['filteroptions'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Filters'),
+    '#description' => t('You can additionally filter your results by selecting the following filter options'),
+  );
+
+  //!TODO: Filtering is a bit hacky; we really need to revisit this to allow
+  //       for things like date ranges, node references, etc. Version 1.1 maybe.
+  //!TODO: Need to use AHAH to allow for more than one filter.
+
+  // alternately, build filter list to show individual filters and base
+  // operators on filter type.
+  if (sizeof($filters) > 0 ) {
+
+      $form['filteroptions']['filter'] = array(
+        '#tree' => TRUE,
+      );
+      $label = array('' => t('Select a field'));
+      array_unshift($filters, 'Select a field');
+      $form['filteroptions']['filter']['field'] = array(
+        '#type' => 'select',
+        '#title' => t('Field to filter by'),
+        '#options' => $filters,
+        '#size' => 1,
+        '#prefix' => '<div class="inline-form">',
+        '#suffix' => '</div>',
+        '#multiple' => FALSE,
+      );
+      $operators = array(
+        '' => t('Select a filter criteria'),
+        '<' => t('Less than'),
+        '<=' => t('Less than or equal to'),
+        '>' => t('Greater than'),
+        '>=' => t('Greater than or equal to'),
+        '=' => t('Equal to'),
+        '<>' => t('Not equal to'),
+        'LIKE' => t('Contains'),
+        'NOT LIKE' => ('Does not contain'),
+      );
+      $form['filteroptions']['filter']['operator'] = array(
+        '#type' => 'select',
+        '#title' => t('Operator'),
+        '#options' => $operators,
+        '#size' => 1,
+        '#prefix' => '<div class="inline-form">',
+        '#suffix' => '</div>',
+        '#multiple' => FALSE,
+      );
+      $form['filteroptions']['filter']['value'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Value'),
+        '#size' => '10',
+        '#attributes' => array('style' => 'width: 150px;'),
+      );
+  }
+
+  // can't have a form without a submit button!
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Generate a map'));
+
+  return $form;
+} // end usergen_map_form_render()
+
+
+/**
+  * Validates form contents so we don't break the visualization
+  * @param $form - see Form API
+  * @param $form_state - see Form API
+  * @return none
+  */
+function usergen_map_form_validate($form, &$form_state) {
+
+  // check that at least one data source is selected
+  if ( !isset($_REQUEST['sources']) or !is_string($_REQUEST['sources']) or $_REQUEST['sources == ""'] ) {
+    form_set_error('sources', t('Select a field to query.'));
+  }
+
+  // check that at least one content type is selected
+  if ( !isset($_REQUEST['types']) or !is_string($_REQUEST['types']) or $_REQUEST['types'] == "" ) {
+    form_set_error('types', t('Select a content type to return pages for.'));
+  }
+
+  // check that filters are valid
+  if (isset($_REQUEST['filter'])) {
+    if ($_REQUEST['filter']['field'] <> "0") {
+
+      // first, check that an operator was selected if a field was selected.
+      if ($_REQUEST['filter']['operator'] == "") {
+        form_set_error('filter][operator', t('Please select an operator'));
+      }
+
+      // now, check for a value for the filter to compare against.
+      if ($_REQUEST['filter']['value'] == "") {
+        form_set_error('filter][value', t('Please enter a value for the filter.'));
+      }
+
+      // and let's check to see if the filter value is valid for the field type.
+      $type = usergenviz_getfields($_REQUEST['filter']['field']);
+
+      // let's make sure it's a valid date
+      if ($type['type'] == 'date') {
+        $testdata = strtotime($_REQUEST['filter']['value']);
+        if ($testdata === FALSE) {
+          form_set_error('filter][value', t('Please enter a valid date value.'));
+        }
+      }
+
+    }
+  }
+} // end usergen_map_form_validate()
+
+
+/**
+  * Handles form submission.
+  * @param $form See Form API
+  * @param $form_state See Form API
+  * @return string Page content.
+  */
+function usergen_map_form_submit($form, &$form_state) {
+
+  $page_content = usergen_map_resultpage();
+
+  print(drupal_render($page_content));
+  return $page_content;
+
+} // end usergen_map_form_submit()
+
+
+/**
+  * Render the map, based on user-supplied criteria
+  * @param $content_types string Content type to render
+  * @param $data_sources string Content Field to use as initial filter.
+  * @param $filters array Additional fields to filter by
+  * @return string Page content for Drupal to render
+  */
+function usergen_map_render($content_types, $data_sources, $filters) {
+
+  // let's get data from the system, based on the supplied criteria
+  $locations = usergen_map_retrieve_data($content_types, $data_sources, $filters);
+  $content = "";
+
+  // now we have to build a gmap macro for display.
+  $gmap_macro = "[gmap markers=small blue::";
+  $i=1;
+
+  // is the i18n module installed? get the current language if it is.
+  if (function_exists('i18n_get_lang')) {
+    $lang = i18n_get_lang();
+  }
+  else {
+    $lang = "";
+  }
+
+  // now, work through each returned location so we can add it to the gmap macro.
+  foreach ($locations as $key => $location) {
+
+      // get a link to the node using the URL alias
+      $path = drupal_get_path_alias("node/{$location['nid']}");
+      // get the translation link
+      if ($lang <> 'en' and $lang<>'') {
+        $path = "{$lang}/{$path}";
+      }
+
+    // we're only interested in data that has lat/long attached to it.
+    if ($location['latitude'] <> "" && $location['latitude'] <> '0.000000,0.000000') {
+      $place = $location['city'];
+      if ($place == "" && $location['location'] <> '') {
+        if ($place <> "") {
+          $place .= " / ";
+        }
+        $place .= "{$location['location']}";
+      }
+
+      // add marker text, based on the node contents.
+      $markertext = "<a href=\"/{$path}\">{$location['title']}</a>";
+      $markertext .= "<p><em>{$place}</em></p>";
+      if ($location['description'] <> "") {
+        $markertext .= "<p>{$location['description']}</p>";
+      }
+      $gmap_macro .= "{$location['latitude']},{$location['longitude']}";
+      $gmap_macro .= ":{$markertext}";
+      if ($i <= sizeof($locations)-1 ) {
+        $gmap_macro .= " + ";
+      }
+      $gmap_places[$i] = "<a href=\"/{$path}\">{$location['title']}: {$place}</a>";
+      $i++;
+    }
+  }
+
+  // finish up the gmap macro
+  $gmap_macro .= "|zoom=8 |center=53.51683835993507,-113.5055923461914 |width=610px |height=400px |control=Small |type=Map]";
+
+  // add locations to the map
+  $mymap = gmap_parse_macro($gmap_macro);
+  $content .= theme_gmap($mymap);
+  $content .= "<h2>" . t('Locations') . "</h2>
+  <p>" . sizeof($gmap_places) . " " . t('records returned.') . "</p>
+  <p>
+  ";
+
+  // build a list of places for display under the map.
+  if (!is_null($gmap_places)) {
+    foreach ($gmap_places as $key => $place) {
+      $content .= "{$place}<br/>";
+    }
+  }
+  else {
+    $content .= t('No locations found that match your criteria.');
+  }
+  $content .= "
+  </p>";
+  
+  return $content;
+}
+
+/**
+  * Default page, displays criteria form to users.
+  *
+  * @return string Page content to display.
+  */
+function usergen_map_defaultpage($form = '', &$form_state = '') {
+
+  $page_content = "";
+
+  $details_settings = variable_get('usergen_map_details', array());
+
+  // get available content types
+  $ugm_config['content_types'] = variable_get('usergen_map_contenttypes', array());
+  $contenttypes = array();
+  $alltypes = usergenviz_getcontenttypes();
+  foreach ($ugm_config['content_types'] as $type) {
+    $contenttypes[$type]['name'] = $alltypes[$type]['name'];
+  }
+
+  // get available data sources
+  $ugm_config['data_sources'] = variable_get('usergen_map_datasources', array());
+  $datasources = array();
+  foreach ($ugm_config['data_sources'] as $datasource) {
+    $field = field_info_field($datasource);
+    $datasources[$field['field_name']]['name'] = $field['widget']['label'];
+  }
+
+  // get available filter options
+  $filters = array();
+  $ugm_config['filters'] = variable_get('usergen_map_filterfields', array());
+  foreach ($ugm_config['filters'] as $filter) {
+    $field = field_info_field($filter);
+    $filters[$field['field_name']]['name'] = $field['widget']['label'];
+  }
+
+  // get remaining configuration options.
+  $ugm_config['display_title'] = $details_settings['usergen_map_displaytitle'];
+  $ugm_config['page_title'] = $details_settings['usergen_map_title'];
+  $page_help = $details_settings['usergen_map_helptext']['text'];
+
+  if (usergenviz_get_saved($user->uid, 'map')) {
+    $page_content .= '<p><a href="' . url('usergen/map/list') . '">' . t('View saved maps') . "</a></p>";
+  }
+
+  $filters = array(
+    array(
+      'field' => 'field_release_year_value',
+      'operator' => '>=',
+      'value' => 1970,
+      ),
+    array(
+      'field' => 'field_release_year_value',
+      'operator' => '<=',
+      'value' => 1975,
+      )
+    );
+
+  if ($page_help <> '') {
+    $page_content .= "<p>" . $page_help . "</p>";
+  }
+
+  $page_form = drupal_get_form('usergen_map_form', $form);
+  $page_content .= drupal_render($page_form);
+
+  return $page_content;
+}
+
+/**
+  * Render the map, based on user-supplied criteria
+  * @return string Page content for Drupal to render
+  */
+function usergen_map_resultpage() {
+
+  // we need to grab readable names for the content types and fields so we can
+  // display these to the user.
+  $datasource = $_REQUEST['sources'];
+  $datasource_info = usergenviz_getfields($datasource);
+  $datasource_name = $datasource_info['widget']['label'];
+  // we don't need this anymore, let's unset to save memory.
+  unset($datasource_info);
+
+  $types = $_REQUEST['types']; // string
+  $alltypes = usergenviz_getcontenttypes();
+  $type_name = $alltypes[$types]['name'];
+  // we don't need this anymore, let's unset to save memory.
+  unset($alltypes);
+
+  $shownodes = $_REQUEST['shownodes']; // string
+  $filter_request[] = $_REQUEST['filter']; // multidimensional array
+
+  if (sizeof($filter_request) > 0) {
+  $filters = array();
+
+  $i=0;
+  foreach ($filter_request as $filter) {
+    $filters[$filter['field']] = $filter_request['filter'];
+    $filter_info = usergenviz_getfields($filter['field']);
+    $filters[$filter['field']]['name'] = $filter_info['widget']['label'];
+    $filters[$filter['field']]['operator'] = $filter['operator'];
+    $filters[$filter['field']]['value'] = $filter['value'];
+    $filters[$filter['field']]['type'] = $filter_info['type'];
+    unset($filter_info);
+    $i++;
+  }
+  }
+  else {
+    $filters = "";
+  }
+
+  // get remaining configuration options.
+  $ugm_config['display_title'] = $details_settings['usergen_map_displaytitle'];
+  $ugm_config['page_title'] = $details_settings['usergen_map_title'];
+  $page_help = $details_settings['usergen_map_helptext']['text'];
+
+  // start building page content
+  $page_content = "";
+
+  if ($ugm_config['display_title'] === '1') {
+    $page_content .= "<h2>" . $page_title . "</h2>";
+  }
+
+  // If the user has permission, build a link to save the results
+  if (user_access('usergen_save_maps')) {
+
+    //!TODO: Rewrite this as a form, so users can supply a name.
+
+    $savelinkparams = array(
+      'sources' => $datasource,
+      'types' => $types,
+      'filter' => $filters,
+      );
+
+    // check to see if we've already saved this map.
+    $save_exists = usergenviz_get_saved($user->uid, 'map', $savelinkparams);
+    if ($save_exists == FALSE) {
+      $savelink = '<a href="' . url('usergen/map/save') . '?' . http_build_query($savelinkparams) . '">' . t('Save this map') . '</a>';
+    }
+    else {
+      $savelink = '<a href="' . url('usergen/map/remove') . '?' . http_build_query($savelinkparams) . '">' . t('Forget this map') . '</a>';
+
+    }
+    if (usergenviz_get_saved($user->uid, 'map')) {
+      $savelink .= ' | <a href="' . url('usergen/map/list') . '">' . t('View saved maps') . "</a>";
+    }
+
+    $page_content .= "<p>{$savelink}</p>";
+  } // end if (user_access())
+
+
+
+  $user_criteria = "<p>" . t('Displaying results for the following criteria:') . "<ul>
+    <li>" . t("Pages of type") . " " . $type_name . "</li>
+    <li>" . t('Data source') . ": " . $datasource_name . "</li>";
+
+  $filters_keys = array_keys($filters);
+  if (isset($filters) && $filters[$filters_keys[0]]['name'] <> "") {
+    $user_criteria .= "<li>" . t('Using filters') . ":<ul>";
+    foreach ($filters as $filter) {
+        $user_criteria .= "<li>{$filter['name']} {$filter['operator']} {$filter['value']}</li>";
+    }
+    $user_criteria .= "</ul></li>";
+  }
+  $user_criteria .= "</ul></p>";
+  $page_content .= $user_criteria;
+  $page_content .= usergen_map_render($types, $datasource, $filters);
+
+  $page_content .= '<p>' . t('Would you like to try again?') . ' <a href="' . url('usergen/map') . '">' . t('Build another map') . '</a></p>';
+
+  return $page_content;
+}
+
+/**
+  * Save a map to the database for a user and return them to that map's page.
+  * @param $data array An array that contains the query parameters to rebuild the map
+  * @return none
+  */
+function usergen_map_save($data) {
+  // we're going to need the user object, so let's get that now.
+  global $user;
+
+  $savedata = array(
+    'sources' => $_REQUEST['sources'],
+    'types' => $_REQUEST['types'],
+    'filter' => $_REQUEST['filter'],
+  );
+
+  $save = array(
+    'uid' => $user->uid,
+    'usergen_map_saved_value' => serialize($savedata),
+    'created' => date('Y-m-d h:i:s'),
+  );
+
+  $sdata = serialize($save);
+
+  // check to see if we've already saved
+
+  $exists = usergenviz_get_saved($user->uid, 'map', $savedata);
+
+  if (!$exists) {
+
+      // we can use drupal_write_record() here to safely save the data
+      // into the database. See http://api.drupal.org/api/drupal/includes!common.inc/function/drupal_write_record/6
+      if ( drupal_write_record('usergen_map_saved', $save) ) {
+
+        // send them back to where they came from.
+        drupal_goto($_SERVER['HTTP_REFERER']);
+      }
+      else {
+        drupal_set_message(t('Could not save user map:'), 'error');
+      }
+
+  }
+  else {
+    $page_content = "";
+    drupal_set_message(t('Map was already saved.'));
+    drupal_goto($_SERVER['HTTP_REFERER']);
+  }
+} // end usergen_map_save();
+
+function usergen_map_remove($data) {
+  // we're going to need the user object, so let's get that now.
+  global $user;
+
+  $savedata = array(
+    'sources' => $_REQUEST['sources'],
+    'types' => $_REQUEST['types'],
+    'filter' => $_REQUEST['filter'],
+  );
+
+
+  // there's no Drupal-safe function for removing records from
+  // the DB, so we'll have to build a query. This is changed in
+  // Drupal 7, see http://api.drupal.org/api/drupal/includes!database!database.inc/function/db_delete/7
+
+  // we have to do some jiggerypokery to make table prefixes work.
+/*
+  $query = "DELETE FROM usergen_map_saved WHERE uid = %s AND usergen_map_saved_value = '%s' ";
+  $query = Database::getConnection()->prefixTables($query);
+
+  $query = sprintf($query, $user->uid, serialize($savedata));
+*/
+
+  $query = db_delete('usergen_map_saved')
+    ->condition('uid', $user->uid, '=')
+    ->condition('usergen_map_saved_value', serialize($savedata), '=');
+
+  // we have to call _db_query() directly, since db_prefix_tables() will strip
+  // out the curly braces in our conditional.  This is going to cause issues
+  // with installs that use table prefixes.
+  if ($query->execute()) {
+    drupal_goto($_SERVER['HTTP_REFERER']);
+  }
+  else {
+    drupal_set_message(t('Could not remove map') . db_error());
+    drupal_goto($_SERVER['HTTP_REFERER']);
+  }
+
+
+} // end usergen_map_remove();
+
+
+/**
+  * Lists all saved maps for a user
+  *
+  * @param none;
+  * @return string page contents.
+  */
+function usergen_map_list() {
+  global $user;
+  $page_contents = "";
+
+  $maps = usergenviz_get_saved($user->uid, 'map');
+
+  $links = array();
+  foreach ($maps as $map) {
+    $rawparams = unserialize($map['usergen_map_saved_value']);
+
+    $params['types'] = $rawparams['types'];
+    $params['sources'] = $rawparams['sources'];
+    $filterkeys = array_keys($rawparams['filter']);
+    $params['filter']['field'] = $filterkeys[0];
+    $params['filter']['operator'] = $rawparams['filter'][$filterkeys[0]]['operator'];
+    $params['filter']['value'] = $rawparams['filter'][$filterkeys[0]]['value'];
+    $params['filter']['type'] = $rawparams['filter'][$filterkeys[0]]['type'];
+    $params['shownodes'] = $rawparams['filter'][$filterkeys[0]]['shownodes'];
+
+
+    $url = url('usergen/map/render') . "?" . http_build_query($params);
+    $alltypes = usergenviz_getcontenttypes();
+    $type_name = $alltypes[$params['types']]['name'];
+    unset($alltypes);
+
+    $datasource_info = usergenviz_getfields($params['sources']);
+    $datasource_name = $datasource_info['widget']['label'];
+    unset($datasource_info);
+
+    $criteria = sprintf(t("Pages of type %s, using the data source %s"), $type_name, $datasource_name);
+
+    $links[$i]['save'] = '<a href="' . rawurldecode($url) . '">' . $criteria . '</a>';
+    $links[$i]['delete'] = '<a href="' . rawurldecode(url('usergen/map/remove')) . '?' . http_build_query($rawparams) . '" title="' . t('Forget this map') . '">[x]</a>';
+    $i++;
+  }
+
+  if (sizeof($links) > 0) {
+    $page_contents .= '<ul id="saved_maps" class="list">';
+    foreach ($links as $link) {
+      $page_contents .= "<li>{$link['save']} {$link['delete']}</li>";
+    }
+    $page_contents .= "</ul>";
+  }
+  else {
+    $page_contents .= "<p>" . t('No saved maps found.') . ' <a href="' . url('usergen/map') . '">' . t('Build another map') . '?</a></p>';
+  }
+
+
+
+
+
+  return $page_contents;
+
+
+} // end usergen_map_list();
+
+

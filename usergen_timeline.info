@@ -1,0 +1,11 @@
+name = User generated timelines
+description = "This module provides users with the ability to generate timelines based on node data"
+core = 7.x
+package = Data visualization
+
+dependencies[] = timeline
+files[] = includes/common.inc.php
+files[] = usergen_timeline.module
+files[] = timeline.module
+
+config = admin/content/usergen_timeline

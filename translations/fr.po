@@ -1,0 +1,353 @@
+# $Id$
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  usergen_map.module: n/a
+#  usergen_map.info: n/a
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: usergen_map\n"
+"POT-Creation-Date: 2012-05-09 11:56-0600\n"
+"PO-Revision-Date: 2012-05-09 12:02-0700\n"
+"Last-Translator: Darren Harkness <darren@athabascau.ca>\n"
+"Language-Team: Athabasca University <elab-project@athabascau.ca>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+"X-Poedit-Language: French\n"
+"X-Poedit-Country: CANADA\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: usergen_map.module:20
+msgid "User Generated Mapping"
+msgstr "Généré par les utilisateurs de cartographie"
+
+#: usergen_map.module:21
+msgid "This allows you to configure default settings for the user-generated mapping tool."
+msgstr "Cela vous permet de configurer les paramètres par défaut de l'outil de calendrier généré par l'utilisateur."
+
+#: usergen_map.module:29
+msgid "Map Results"
+msgstr "Résultats de la recherche"
+
+#: usergen_map.module:30
+msgid "Pages that match your selected criteria are listed below."
+msgstr "Pages qui correspondent à vos critères sélectionnés sont répertoriés ci-dessous."
+
+#: usergen_map.module:39
+msgid "User-generated mapping"
+msgstr "Généré par les utilisateurs de cartographie"
+
+#: usergen_map.module:52;1283
+msgid "Saved maps"
+msgstr "C\artes enregistrées"
+
+#: usergen_map.module:123
+msgid "Allows users to generate maps from node field data."
+msgstr "Permet aux utilisateurs de générer des délais à partir de données sur le terrain de nœuds."
+
+#: usergen_map.module:145
+msgid "General Details"
+msgstr "Détails générales"
+
+#: usergen_map.module:153
+msgid "Label"
+msgstr "Étiquette"
+
+#: usergen_map.module:156
+msgid "User-generated mapping."
+msgstr "Généré par les utilisateurs de cartographie"
+
+#: usergen_map.module:157
+msgid "Label to be displayed on the page."
+msgstr "Etiquette à afficher sur la page."
+
+#: usergen_map.module:164
+msgid "On-screen help"
+msgstr "Sur l'écran d'aide"
+
+#: usergen_map.module:165
+msgid "Help text to display to the user"
+msgstr "Aide texte à afficher à l'utilisateur"
+
+#: usergen_map.module:168
+msgid "Build a map from site contents using the data sources and filters below."
+msgstr "Construire une chronologie à partir du contenu du site en utilisant les sources de données et des filtres ci-dessous."
+
+#: usergen_map.module:183
+msgid "Data Sources and Filtering"
+msgstr "Sources des données et de filtrage"
+
+#: usergen_map.module:184
+msgid "Select one or more of the following to expose to users as sources of location data."
+msgstr "Sélectionnez un ou plusieurs des éléments suivants pour exposer aux utilisateurs en tant que sources de données calendrier."
+
+#: usergen_map.module:189;633
+msgid "Data Sources"
+msgstr "Sources des données"
+
+#: usergen_map.module:214;663
+msgid "Content types"
+msgstr "Types de contenu"
+
+#: usergen_map.module:215
+msgid "Select the content type(s) you want to map"
+msgstr "Sélectionnez le type de contenu (s) que vous souhaitez créer un calendrier pour"
+
+#: usergen_map.module:231
+msgid "Additional fields to filter by"
+msgstr "Des champs supplémentaires pour filtrer par"
+
+#: usergen_map.module:232
+msgid "Select the additional fields you want users to use"
+msgstr "Sélectionnez les champs supplémentaires que vous souhaitez aux utilisateurs d'utiliser"
+
+#: usergen_map.module:531
+msgid "No summary available"
+msgstr "Aucun champ disponible."
+
+#: usergen_map.module:569;723
+msgid "Less than"
+msgstr "Inférieur"
+
+#: usergen_map.module:570
+msgid "More than"
+msgstr "Plus que"
+
+#: usergen_map.module:571;724
+msgid "Less than or equal to"
+msgstr "Inférieur ou égal à"
+
+#: usergen_map.module:572;726
+msgid "Greater than or equal to"
+msgstr "Supérieur ou égal à"
+
+#: usergen_map.module:573;577;727
+msgid "Equal to"
+msgstr "Egal à"
+
+#: usergen_map.module:574;728
+msgid "Not equal to"
+msgstr "Pas égal à"
+
+#: usergen_map.module:578;729
+msgid "Contains"
+msgstr "Contient"
+
+#: usergen_map.module:579
+msgid "Does not contain"
+msgstr "Ne contient pas"
+
+#: usergen_map.module:634
+msgid "Select one of the following fields to query."
+msgstr "Sélectionnez l'un des domaines suivants à la requête."
+
+#: usergen_map.module:645
+msgid "Sources"
+msgstr "Sources"
+
+#: usergen_map.module:654
+msgid "Filter by content type"
+msgstr "Filtrer par type de contenu"
+
+#: usergen_map.module:655
+msgid "Returns pages for the selected content types."
+msgstr "Retourne pages pour les types de contenu sélectionnés."
+
+#: usergen_map.module:687
+msgid "Show list of matching pages"
+msgstr "Affichez seulement dans les pages énumérées."
+
+#: usergen_map.module:688
+msgid "If enabled, this will show a list of pages plotted on the map, with links to the individual page."
+msgstr "Si elle est activée, cela vous montrera une liste de pages tracées sur la carte, avec des liens vers la page individuelle."
+
+#: usergen_map.module:695
+msgid "Filters"
+msgstr "Filtres"
+
+#: usergen_map.module:696
+msgid "You can additionally filter your results by selecting the following filter options"
+msgstr "Vous pouvez en outre filtrer vos résultats en sélectionnant les options de filtres suivants"
+
+#: usergen_map.module:710
+msgid "Select a field"
+msgstr "- Sélectionnez un type de champ -"
+
+#: usergen_map.module:714
+msgid "Field to filter by"
+msgstr "Des champs supplémentaires pour filtrer par"
+
+#: usergen_map.module:722
+msgid "Select a filter criteria"
+msgstr "Filtre inconnu/manquant"
+
+#: usergen_map.module:725
+msgid "Greater than"
+msgstr "Supérieur"
+
+#: usergen_map.module:734
+msgid "Operator"
+msgstr "Opérateur"
+
+#: usergen_map.module:743
+msgid "Value"
+msgstr "Valeur"
+
+#: usergen_map.module:750
+msgid "Generate a map"
+msgstr "Cliquer sur la carte"
+
+#: usergen_map.module:766
+msgid "Select a field to query."
+msgstr "Sélectionnez un champ à la requête."
+
+#: usergen_map.module:771
+msgid "Select a content type to return pages for."
+msgstr "Sélectionnez un type de contenu pour revenir pages pour."
+
+#: usergen_map.module:780
+msgid "Please select an operator"
+msgstr "S'il vous plaît sélectionner un opérateur"
+
+#: usergen_map.module:785
+msgid "Please enter a value for the filter."
+msgstr "S'il vous plaît entrer une valeur pour le filtre."
+
+#: usergen_map.module:795
+msgid "Please enter a valid date value."
+msgstr "S'il vous plaît entrez une valeur de date valide."
+
+#: usergen_map.module:885
+msgid "Locations"
+msgstr "emplacements utilisateurs "
+
+#: usergen_map.module:886
+msgid "records returned."
+msgstr "Le message d'erreur est :"
+
+#: usergen_map.module:896
+msgid "No locations found that match your criteria."
+msgstr "Pas de lieux trouvés qui correspondent à vos critères."
+
+#: usergen_map.module:944;1042
+msgid "View saved maps"
+msgstr "Voir les cartes enregistrées"
+
+#: usergen_map.module:1036
+msgid "Save this map"
+msgstr "Enregistrer cette carte"
+
+#: usergen_map.module:1038;1190
+msgid "Forget this map"
+msgstr "Oubliez cette carte"
+
+#: usergen_map.module:1050
+msgid "Displaying results for the following criteria:"
+msgstr "Affichage des résultats pour les critères suivants:"
+
+#: usergen_map.module:1051
+msgid "Pages of type "
+msgstr "Pages de type"
+
+#: usergen_map.module:1052
+msgid "Data source: "
+msgstr "Source des données:"
+
+#: usergen_map.module:1056
+msgid "Using filters: "
+msgstr "L'utilisation de filtres:"
+
+#: usergen_map.module:1066
+msgid "Would you like to try again?"
+msgstr "Voulez-vous essayer de nouveau?"
+
+#: usergen_map.module:1066;1201
+msgid "Build another map"
+msgstr "Construire un autre scénario"
+
+#: usergen_map.module:1107
+msgid "Could not save user map:"
+msgstr "Impossible d'enregistrer la carte d'utilisateur:"
+
+#: usergen_map.module:1112
+msgid "Map was already saved."
+msgstr "Carte a été déjà enregistré."
+
+#: usergen_map.module:1144
+msgid "Could not remove map"
+msgstr "Impossible de supprimer la carte"
+
+#: usergen_map.module:1187
+msgid "Pages of type %s, using the data source %s"
+msgstr "Pages de type %s, en utilisant la source de données %s"
+
+#: usergen_map.module:1201
+msgid "No saved maps found."
+msgstr "Pas de cartes enregistrées trouvé."
+
+#: usergen_map.module:1273
+#, fuzzy
+msgid "User generated maps"
+msgstr "Calendrier généré par les utilisateurs"
+
+#: usergen_map.module:251
+msgid "Generate maps"
+msgstr "Produire des cartes"
+
+#: usergen_map.module:251
+msgid "Save maps"
+msgstr "Enregistrer des cartes"
+
+#: usergen_map.module:251
+msgid "Administer usergen_map"
+msgstr "Administrer usergen_map"
+
+#: usergen_map.module:251
+msgid "Delete own maps"
+msgstr "Supprimer propres cartes"
+
+#: usergen_map.install:11
+msgid "Base table for the usergen_map module to save user-generated maps."
+msgstr "Table de base pour le module usergen_map pour sauver générés par les utilisateurs des cartes."
+
+#: usergen_map.install:14
+msgid "Unique identifier for the saved bookmark"
+msgstr "Identificateur unique pour le signet enregistré"
+
+#: usergen_map.install:20
+msgid "User ID for the saved map"
+msgstr "ID utilisateur pour la carte enregistrée"
+
+#: usergen_map.install:25
+msgid "Title for the saved map"
+msgstr "Titre de la carte enregistrée"
+
+#: usergen_map.install:31
+msgid "Date the map was saved."
+msgstr "Date de la carte a été sauvé."
+
+#: usergen_map.install:36
+msgid "JSON-encoded array of filter options"
+msgstr ""
+
+#: usergen_map.info:0
+msgid "User Generated Maps"
+msgstr "Calendrier généré par les utilisateurs"
+
+#: usergen_map.info:0
+msgid "This module provides users with the ability to generate timelines based on node data"
+msgstr "Ce module fournit aux utilisateurs la capacité de générer des délais sur la base de données de nœud"
+
+#: usergen_map.info:0
+msgid "Data visualization"
+msgstr "La visualisation des données"
+
+#~ msgid "access usergen_map"
+#~ msgstr "Accès usergen_timeline"
+
+#~ msgid "save usergen_map"
+#~ msgstr "Enregistrer usergen_timeline"

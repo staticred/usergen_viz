@@ -1,0 +1,336 @@
+# $Id$
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  usergen_timeline.module: n/a
+#  usergen_timeline.info: n/a
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: usergen_timeline\n"
+"POT-Creation-Date: 2012-05-09 11:56-0600\n"
+"PO-Revision-Date: 2012-05-09 12:06-0700\n"
+"Last-Translator: Darren Harkness <darren@athabascau.ca>\n"
+"Language-Team: Athabasca University <elab-project@athabascau.ca>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+"X-Poedit-Language: French\n"
+"X-Poedit-Country: CANADA\n"
+
+#: usergen_timeline.module:18
+msgid "User Generated Timelines"
+msgstr "Calendrier généré par les utilisateurs"
+
+#: usergen_timeline.module:19
+msgid "This allows you to configure default settings for the user-generated timeline tool."
+msgstr "Cela vous permet de configurer les paramètres par défaut de l'outil de calendrier généré par l'utilisateur."
+
+#: usergen_timeline.module:27
+msgid "Timeline Results"
+msgstr "Résultats Chronologie"
+
+#: usergen_timeline.module:28
+msgid "Pages that match your selected criteria are listed below."
+msgstr "Pages qui correspondent à vos critères sélectionnés sont répertoriés ci-dessous."
+
+#: usergen_timeline.module:37
+msgid "User-generated timelines"
+msgstr "Calendrier généré par les utilisateurs"
+
+#: usergen_timeline.module:57;1251
+msgid "Saved timelines"
+msgstr "calendrier enregistrés"
+
+#: usergen_timeline.module:82
+msgid "Allows users to generate timelines from node field data."
+msgstr "Permet aux utilisateurs de générer des délais à partir de données sur le terrain de nœuds."
+
+#: usergen_timeline.module:101
+msgid "General Details"
+msgstr "Détails générales"
+
+#: usergen_timeline.module:109
+msgid "Label"
+msgstr "Étiquette"
+
+#: usergen_timeline.module:112
+msgid "User-generated timelines."
+msgstr "Calendrier généré par les utilisateurs"
+
+#: usergen_timeline.module:113
+msgid "Label to be displayed on the page. NOTE: If caching is enabled, you will have to clear the menu cache for this change to be reflected on your site."
+msgstr "Etiquette à afficher sur la page. REMARQUE: Si la mise en cache est activé, vous devrez effacer le cache du menu de ce changement se reflète sur votre site."
+
+#: usergen_timeline.module:120
+msgid "On-screen help"
+msgstr "Sur l'écran d'aide"
+
+#: usergen_timeline.module:121
+msgid "Help text to display to the user"
+msgstr "Aide texte à afficher à l'utilisateur"
+
+#: usergen_timeline.module:124
+msgid "Build a timeline from site contents using the data sources and filters below."
+msgstr "Construire une chronologie à partir du contenu du site en utilisant les sources de données et des filtres ci-dessous."
+
+#: usergen_timeline.module:139
+msgid "Data Sources and Filtering"
+msgstr "Sources des données et de filtrage"
+
+#: usergen_timeline.module:140
+msgid "Select one or more of the following to expose to users as sources of timeline data."
+msgstr "Sélectionnez un ou plusieurs des éléments suivants pour exposer aux utilisateurs en tant que sources de données calendrier."
+
+#: usergen_timeline.module:145;754
+msgid "Data Sources"
+msgstr "Sources des données"
+
+#: usergen_timeline.module:168;729
+msgid "Content types"
+msgstr "Types de contenu"
+
+#: usergen_timeline.module:169
+msgid "Select the content type(s) you want to create a timeline for"
+msgstr "Sélectionnez le type de contenu (s) que vous souhaitez créer un calendrier pour"
+
+#: usergen_timeline.module:185
+msgid "Additional fields to filter by"
+msgstr "Des champs supplémentaires pour filtrer par"
+
+#: usergen_timeline.module:186
+msgid "Select the additional fields you want users to use"
+msgstr "Sélectionnez les champs supplémentaires que vous souhaitez aux utilisateurs d'utiliser"
+
+#: usergen_timeline.module:196
+msgid "Timeline date range"
+msgstr "Intervalle d'années de la date"
+
+#: usergen_timeline.module:197
+msgid "Select a default date range for the timeline."
+msgstr "Sélectionnez une plage de dates par défaut pour la chronologie."
+
+#: usergen_timeline.module:201;786
+msgid "From"
+msgstr "à partir de"
+
+#: usergen_timeline.module:210
+msgid "To"
+msgstr "A"
+
+#: usergen_timeline.module:255
+msgid "Simile Timeline Libraries not found"
+msgstr "Bibliothèques Simile Timeline pas trouvé"
+
+#: usergen_timeline.module:649
+msgid "Less than"
+msgstr "Inférieur"
+
+#: usergen_timeline.module:650
+msgid "More than"
+msgstr "Plus que"
+
+#: usergen_timeline.module:651
+msgid "Less than or equal to"
+msgstr "Inférieur ou égal à"
+
+#: usergen_timeline.module:652
+msgid "Greater than or equal to"
+msgstr "Supérieur ou égal à"
+
+#: usergen_timeline.module:653;657
+msgid "Equal to"
+msgstr "Egal à"
+
+#: usergen_timeline.module:654
+msgid "Not equal to"
+msgstr "Pas égal à"
+
+#: usergen_timeline.module:658
+msgid "Contains"
+msgstr "Contient"
+
+#: usergen_timeline.module:659
+msgid "Does not contain"
+msgstr "Ne contient pas"
+
+#: usergen_timeline.module:718
+msgid "Filter by content type"
+msgstr "Filtrer par type de contenu"
+
+#: usergen_timeline.module:719
+msgid "Returns pages for the selected content types."
+msgstr "Retourne pages pour les types de contenu sélectionnés."
+
+#: usergen_timeline.module:755
+msgid "Select one of the following fields to query."
+msgstr "Sélectionnez l'un des domaines suivants à la requête."
+
+#: usergen_timeline.module:770
+msgid "Sources"
+msgstr "Sources"
+
+#: usergen_timeline.module:780
+msgid "Filter by date (optional)"
+msgstr "Filtrer par date (facultatif)"
+
+#: usergen_timeline.module:781
+msgid "You can filter results on your timeline by entering values in the fields below. Use one of the following formats: YYYY or YY-MM-DD."
+msgstr "Vous pouvez filtrer les résultats sur votre calendrier en entrant des valeurs dans les champs ci-dessous. Utilisez l'un des formats suivants: AAAA ou AA-MM-JJ."
+
+#: usergen_timeline.module:795
+msgid "to"
+msgstr "vers"
+
+#: usergen_timeline.module:806
+msgid "Generate a timeline"
+msgstr "Générer un calendrier"
+
+#: usergen_timeline.module:821
+msgid "Select a field to query."
+msgstr "Sélectionnez un champ à la requête."
+
+#: usergen_timeline.module:826
+msgid "Select a content type to return pages for."
+msgstr "Sélectionnez un type de contenu pour revenir pages pour."
+
+#: usergen_timeline.module:832;837;862
+msgid "Please enter a valid date value."
+msgstr "S'il vous plaît entrez une valeur de date valide."
+
+#: usergen_timeline.module:847
+msgid "Please select an operator"
+msgstr "S'il vous plaît sélectionner un opérateur"
+
+#: usergen_timeline.module:852
+msgid "Please enter a value for the filter."
+msgstr "S'il vous plaît entrer une valeur pour le filtre."
+
+#: usergen_timeline.module:928;1013
+msgid "View saved timelines"
+msgstr "Voir calendrier enregistrés"
+
+#: usergen_timeline.module:1007
+msgid "Save this timeline"
+msgstr "Enregistrer cette calendrier"
+
+#: usergen_timeline.module:1009;1158
+msgid "Forget this timeline"
+msgstr "Oubliez ce calendrier"
+
+#: usergen_timeline.module:1020
+msgid "Displaying results for the following criteria:"
+msgstr "Affichage des résultats pour les critères suivants:"
+
+#: usergen_timeline.module:1021
+msgid "Pages of type "
+msgstr "Pages de type"
+
+#: usergen_timeline.module:1022
+msgid "Data source: "
+msgstr "Source des données:"
+
+#: usergen_timeline.module:1025
+msgid "Using filters: "
+msgstr "L'utilisation de filtres:"
+
+#: usergen_timeline.module:1033
+msgid "Would you like to try again?"
+msgstr "Voulez-vous essayer de nouveau?"
+
+#: usergen_timeline.module:1033;1169
+msgid "Build another timeline"
+msgstr "Construire un autre scénario"
+
+#: usergen_timeline.module:1079
+msgid "Could not save user timeline:"
+msgstr "Impossible d'enregistrer calendrier utilisateur:"
+
+#: usergen_timeline.module:1084
+msgid "Timeline was already saved."
+msgstr "Chronologie a été déjà enregistré."
+
+#: usergen_timeline.module:1117
+msgid "Could not remove timeline"
+msgstr "Impossible de supprimer le calendrier"
+
+#: usergen_timeline.module:1149
+#, fuzzy
+msgid "Pages of type %s, using the data source %s"
+msgstr "Pages de type %s, en utilisant la source de données %s"
+
+#: usergen_timeline.module:1151
+msgid " from %s"
+msgstr "De %s"
+
+#: usergen_timeline.module:1154
+msgid " to %s"
+msgstr "à %s"
+
+#: usergen_timeline.module:1169
+msgid "No saved timelines found."
+msgstr "Aucun échéancier enregistrés trouvé."
+
+#: usergen_timeline.module:1241
+#: usergen_timeline.info:0
+msgid "User generated timelines"
+msgstr "Calendrier généré par les utilisateurs"
+
+#: usergen_timeline.module:227
+msgid "Generate timelines"
+msgstr "Générer calendrier"
+
+#: usergen_timeline.module:227
+msgid "Save timelines"
+msgstr "Enregistrer calendrier"
+
+#: usergen_timeline.module:227
+#, fuzzy
+msgid "Administer usergen_timeline"
+msgstr "Administrer usergen_timeline"
+
+#: usergen_timeline.module:227
+msgid "Delete own timelines"
+msgstr "Supprimer calendrier propres"
+
+#: usergen_timeline.module:43
+msgid "test"
+msgstr "test"
+
+#: usergen_timeline.install:11
+msgid "Base table for the usergen_timeline module to save user-generated timelines."
+msgstr "Table de base pour le module usergen_timeline pour sauver calendrier générés par les utilisateurs."
+
+#: usergen_timeline.install:14
+#, fuzzy
+msgid "Unique identifier for the saved bookmark"
+msgstr "Identificateur unique pour le signet enregistré"
+
+#: usergen_timeline.install:20
+msgid "User ID for the saved timeline"
+msgstr "ID utilisateur pour la chronologie sauvé"
+
+#: usergen_timeline.install:25
+msgid "Title for the saved timeline"
+msgstr "Titre pour le calendrier sauvé"
+
+#: usergen_timeline.install:31
+msgid "Date the timeline was saved."
+msgstr "Date à laquelle le calendrier a été sauvé."
+
+#: usergen_timeline.install:36
+msgid "serialized filter options"
+msgstr "sérialisés les options de filtrage"
+
+#: usergen_timeline.info:0
+msgid "This module provides users with the ability to generate timelines based on node data"
+msgstr "Ce module fournit aux utilisateurs la capacité de générer des délais sur la base de données de nœud"
+
+#: usergen_timeline.info:0
+msgid "Data visualization"
+msgstr "La visualisation des données"
+
+#~ msgid "access usergen_timeline"
+#~ msgstr "Accès usergen_timeline"

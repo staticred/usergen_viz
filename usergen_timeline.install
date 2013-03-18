@@ -1,0 +1,52 @@
+<?php
+/**
+ * @file
+ * Install file for user generated timelines module.
+ */
+
+/**
+ * Implements hook_schema().
+ *
+ * Builds scheme for usergen_timeline install/uninstall.
+ */
+function usergen_timeline_schema() {
+  $schema['usergen_timeline_saved'] = array(
+    'description' => 'Base table for the usergen_timeline module to save user-generated timelines.',
+    'fields' => array(
+      'vid' => array(
+        'description' => 'Unique identifier for the saved bookmark',
+        'type' => 'int',
+        'not null' => TRUE,
+        'auto_increment' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'User ID for the saved timeline',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'usergen_timeline_saved_title' => array(
+        'description' => 'Title for the saved timeline',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => FALSE,
+        'default' => 'Saved timeline',
+      ),
+      'created' => array(
+        'description' => 'Date the timeline was saved.',
+        'type' => 'datetime',
+        'not null' => TRUE,
+      ),
+      'usergen_timeline_saved_value' => array(
+        'description' => 'serialized filter options',
+        'type' => 'text',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('vid'),
+  );
+
+  return $schema;
+
+}
+

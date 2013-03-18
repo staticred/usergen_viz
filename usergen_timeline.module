@@ -1,0 +1,1211 @@
+<?php
+/**
+ * @file
+ * User generated timelines module. Allows users to build timelines based on
+ * site contents.
+ */
+
+/**
+ * !TODO: Need to figure out node references.
+ * !TODO: Need to add node creation dates as filter options (ie: for blogs)
+ * !TODO: Users should be able to save timelines
+ * !TODO: Saved timelines should be given names.
+ */
+
+// Include common functions.
+require_once("includes/common.inc.php");
+
+
+/**
+ * Implements hook_menu().
+ *
+ * Reserves aliases/paths within Drupal, and adds menu items to admin page, etc.
+ *
+ * @return array
+ *   Menu items for Drupal's menu system.
+ */
+function usergen_timeline_menu() {
+
+  $items['admin/content/usergen_timeline'] = array(
+    'title' => 'User Generated Timelines',
+    'description' => 'This allows you to configure default settings for the user-generated timeline tool.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('usergen_timeline_admin'),
+    'access arguments' => array('administer_usergen_timeline'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $details = variable_get('usergen_timeline_details', array());
+  $items['usergen/timeline/results'] = array(
+    'title' => 'Timeline Results',
+    'description' => 'Pages that match your selected criteria are listed below.',
+    'page callback' => 'usergen_timeline_resultpage',
+    'page arguments' => array(1),
+    'access arguments' => array('usergen_generate_timelines'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['usergen/timeline'] = array(
+    'title' => (!empty($details['usergen_timeline_title'])) ? $details['usergen_timeline_title'] : 'User-generated timelines',
+    'page callback' => 'usergen_timeline_defaultpage',
+    'access arguments' => array('usergen_generate_timelines'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['usergen/timeline/json'] = array(
+    'title' => 'test',
+    'page callback' => 'usergen_timeline_retrieve_data',
+    'access arguments' => array('usergen_generate_timelines'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['usergen/timeline/save'] = array(
+    'title' => '',
+    'page callback' => 'usergen_timeline_save',
+    'page arguments' => $_REQUEST,
+    'access arguments' => array('usergen_save_timelines'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['usergen/timeline/list'] = array(
+    'title' => 'Saved timelines',
+    'page callback' => 'usergen_timeline_list',
+    'access arguments' => array('usergen_save_timelines'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['usergen/timeline/remove'] = array(
+    'title' => '',
+    'page callback' => 'usergen_timeline_remove',
+    'page arguments' => $_REQUEST,
+    'access arguments' => array('usergen_delete_timelines'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+/**
+ * Implements hook_help().
+ *
+ * Adds help string to Drupal's admin pages.
+ *
+ * @return string
+ *   Help text to display.
+ */
+function usergen_timeline_help($path, $arg) {
+
+  $output = "";
+
+  switch ($path) {
+    case 'admin/help#usergen_timeline':
+      $output = '<p>' . t("Allows users to generate timelines from node field data.") . '</p>';
+      break;
+
+  }
+  return $output;
+
+}
+
+/**
+ * Implements hook_admin().
+ *
+ * Admin form for usergen_timeline.
+ *
+ * @return array
+ *   Returns form to Drupal for rendering.
+ */
+function usergen_timeline_admin() {
+  global $base_url;
+  $form = array();
+
+  $form['usergen_timeline_details'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('General Details'),
+    '#description' => t('Configures general display settings. You can access user generated timelines at') . ' <a href="' . url('usergen/timeline') . '">' . $base_url . url('usergen/timeline') . '</a>',
+    '#tree' => TRUE,
+  );
+
+  $details = variable_get('usergen_timeline_details', array());
+  $form['usergen_timeline_details']['usergen_timeline_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Label'),
+    '#default_value' => (!empty($details['usergen_timeline_title'])) ? $details['usergen_timeline_title'] : t('User-generated timelines.'),
+    '#description' => t('Label to be displayed on the page. NOTE: If caching is enabled, you will have to clear the menu cache for this change to be reflected on your site.'),
+    '#required' => FALSE,
+  );
+
+  $helptext = variable_get('usergen_timeline_helptext', array());
+  $form['usergen_timeline_details']['usergen_timeline_helptext']['text'] = array(
+    '#type' => 'textarea',
+    '#title' => t('On-screen help'),
+    '#description' => t('Help text to display to the user'),
+    '#default_value' => (!empty($details['usergen_timeline_helptext']['text'])) ? $details['usergen_timeline_helptext']['text'] : t('Build a timeline from site contents using the data sources and filters below.'),
+    '#format' => isset($details['format']) ? $details['format'] : NULL,
+  );
+//  $form['usergen_timeline_details']['usergen_timeline_helptext']['format'] = filter_form();
+
+  // Let's get a list of location fields to use as a data source.
+  $loc_fields = array();
+  $fields = usergenviz_getfields('', 'date');
+  foreach ($fields as $field) {
+    $loc_fields[$field['field_name']] = $field['widget']['label'];
+  }
+
+  // And add a configuration option to the settings page for it.
+  $form['usergen_timeline_fields'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Data Sources and Filtering'),
+    '#description' => t('Select one or more of the following to expose to users as sources of timeline data.'),
+  );
+
+  $form['usergen_timeline_fields']['usergen_timeline_datasources'] = array(
+    '#type' => 'select',
+    '#title' => t('Data Sources'),
+    '#description' => t(''),
+    '#options' => $loc_fields,
+    '#default_value' => variable_get('usergen_timeline_datasources', array()),
+    '#multiple' => TRUE,
+    '#attributes' => array('size' => 4),
+    '#weight' => 1,
+  );
+
+  $content_types = array();
+  $types = usergenviz_getcontenttypes();
+  foreach ($types as $type) {
+    if (isset($type['fields'])) {
+      foreach ($type['fields'] as $field) {
+        if ($field['type'] == 'date') {
+          $content_types[$type['type']] = $type['name'];
+        }
+      }
+    }
+  }
+
+  $form['usergen_timeline_fields']['usergen_timeline_contenttypes'] = array(
+    '#type' => 'select',
+    '#title' => t('Content types'),
+    '#description' => t('Select the content type(s) you want to create a timeline for'),
+    '#options' => $content_types,
+    '#default_value' => variable_get('usergen_timeline_contenttypes', array()),
+    '#multiple' => TRUE,
+    '#attributes' => array('size' => 4),
+    '#weight' => 2,
+  );
+
+  $filter_fields = array();
+  $all_fields = usergen_timeline_getfields();
+  foreach ($all_fields as $field) {
+    $filter_fields[$field['field_name']] = "{$field['type']}: {$field['widget']['label']} ({$field['field_name']})";
+  }
+
+  $form['usergen_timeline_fields']['usergen_timeline_filterfields'] = array(
+    '#type' => 'select',
+    '#title' => t('Additional fields to filter by'),
+    '#description' => t('Select the additional fields you want users to use'),
+    '#options' => $filter_fields,
+    '#default_value' => variable_get('usergen_timeline_filterfields', array()),
+    '#multiple' => TRUE,
+    '#attributes' => array('size' => 4),
+    '#weight' => 10,
+  );
+
+  $form['usergen_timeline_dates'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Timeline date range'),
+    '#description' => t('Select a default date range for the timeline.'),
+  );
+
+  $form['usergen_timeline_dates']['usergen_timeline_fromdate'] = array(
+    '#type' => 'textfield',
+    '#title' => t('From'),
+    '#size' => '10',
+    '#prefix' => '<div class="inline-form" style="width: 150px; float: left; margin: 10px;">',
+    '#suffix' => '</div>',
+    '#default_value' => variable_get('usergen_timeline_fromdate', array()),
+    '#attributes' => array('style' => 'width: 150px;'),
+  );
+
+  $form['usergen_timeline_dates']['usergen_timeline_todate'] = array(
+    '#type' => 'textfield',
+    '#title' => t('To'),
+    '#size' => '10',
+    '#prefix' => '<div class="inline-form" style="width: 150px; float: left; margin: 10px;">',
+    '#suffix' => '</div>',
+    '#default_value' => variable_get('usergen_timeline_todate', array()),
+    '#attributes' => array('style' => 'width: 150px;'),
+  );
+  return system_settings_form($form);
+
+}
+
+/**
+ * Implements hook_perm().
+ *
+ * User permissions for module.
+ *
+ * @return array
+ *   Array of permissions.
+ */
+function usergen_timeline_permission() {
+  return array(
+    'usergen_generate_timelines' => array(
+      'title' => t('Generate User Timelines'),
+      'description' => t('Generate timelines using site data.'),
+    ),
+    'usergen_save_timelines' => array(
+      'title' => t('Save user timelines'),
+      'description' => t('This gives the specified group permissions to save generated timelines.'),
+    ),
+    'administer_usergen_timeline' => array(
+      'title' => t('Administer user timelines'),
+      'description' => t('Gives permission for the user-generated timelines configuration page'),
+    ),
+    'usergen_delete_timelines' => array(
+      'title' => t('Delete timelines'),
+      'description' => t('Allows users to delete their own saved timelines.'),
+    ),
+  );
+}
+
+
+/**
+ * Inlude all js and css files that needs the timeline.
+ *
+ * Depending on the timeline views settings the external SIMILE server is used.
+ * Or otherwise a local installation.
+ *
+ * @return boolean
+ *   TRUE if everything could be included properly,
+ *   FALSE if Simile Exhibit Libraries aren't found.
+ */
+function usergen_timeline_include($timeline_theme = "ClassicTheme") {
+  $timeline_mod_path = drupal_get_path('module', 'timeline');
+
+  // Use SIMILE Server.
+  if (variable_get('timeline_library_source', 'hosted') == 'hosted') {
+    $timeline_api = 'http://static.simile.mit.edu/timeline/api-2.3.0/timeline-api.js?bundle=TRUE';
+    drupal_set_html_head('<script type="text/javascript" src="' . $timeline_api . '"></script>');
+  }
+  elseif (variable_get('timeline_library_source', 'hosted') == 'local' && $message = timeline_validate_library()) {
+    $timeline_lib_path = libraries_get_path('simile_timeline');
+    drupal_add_js(file_directory_path() . '/timeline/local_variables.js');
+    drupal_add_js($timeline_lib_path . '/timeline_js/timeline-api.js?bundle=TRUE');
+  }
+  else {
+    drupal_set_message(t('Simile Timeline Libraries not found'), 'error');
+    return FALSE;
+  }
+
+  drupal_add_css($timeline_mod_path . '/css/timeline.css');
+
+  // Include custom theme files (if activated).
+  if ($timeline_theme != $timeline_mod_path . '/themes/ClassicTheme' && $timeline_theme != FALSE) {
+    drupal_add_js($timeline_theme . '/theme.js');
+    drupal_add_css($timeline_theme . '/theme.css');
+  }
+  drupal_add_js($timeline_mod_path . '/js/timeline.js');
+  return TRUE;
+}
+
+/**
+ * Function to get list of fields in the database matching the 'location' type.
+ *
+ * This is so we can bring this back to admin functions, etc
+ *
+ * @param string $fieldname
+ *   name of field to return
+ * @param string $fieldtype
+ *   type of field to return
+ *
+ * @return mixed
+ *   returns array with list of fields, or FALSE if no fields found
+ *   with the following format:
+ *
+ * array(1) {
+ *   ["field_name"]=>
+ *   array(3) {
+ *     ["name"]=>
+ *     string(14) "Name of field (Label)"
+ *     ["table"]=>
+ *     string(27) "content_field_table"
+ *     ["column"]=>
+ *     string(23) "field_field_id"
+ *   }
+ * }
+ *
+ * For example, if looking for a list of 'location' fields, the following might
+ * be returned:
+ *
+ * array(3) {
+ *   ["field_film_location"]=>
+ *   array(3) {
+ *     ["name"]=>
+ *     string(14) "Shoot Location"
+ *     ["table"]=>
+ *     string(27) "content_field_film_location"
+ *     ["column"]=>
+ *     string(23) "field_film_location_lid"
+ *   }
+ *   ["field_distribution_location"]=>
+ *   array(3) {
+ *     ["name"]=>
+ *     string(21) "Distribution Location"
+ *     ["table"]=>
+ *     string(35) "content_field_distribution_location"
+ *     ["column"]=>
+ *     string(31) "field_distribution_location_lid"
+ *   }
+ *   ["field_interviewlocation"]=>
+ *   array(3) {
+ *     ["name"]=>
+ *     string(14) "Panel Location"
+ *     ["table"]=>
+ *     string(31) "content_field_interviewlocation"
+ *     ["column"]=>
+ *     string(27) "field_interviewlocation_lid"
+ *   }
+ * }
+ */
+function usergen_timeline_getfields($fieldname = '', $fieldtype = '') {
+
+  // Get a list of content fields (CCK) configured on the system.
+  $fields = field_info_field($fieldname);
+  $loc_fields = array();
+  $i = 0;
+
+  // we're only interested in the fields we've passed to the
+  // function call, of course.
+  foreach ($fields as $key => $field) {
+    if ($fieldtype <> "") {
+      if ($field['type'] == $fieldtype) {
+        $loc_fields[$key] = $field;
+      }
+    }
+    else {
+      $loc_fields[$key] = $field;
+    }
+    $i++;
+  }
+  if (sizeof($loc_fields) > 0) {
+    return $loc_fields;
+  }
+  else {
+    return FALSE;
+  }
+
+}
+
+/**
+ * Retrieves data for the specified criteria.
+ *
+ * @param array $content_fields
+ *   An array of content types to pull.
+ * @param string $date_field
+ *   An array of date fields to pull.
+ * @param string $fromdate
+ *   Date to start filtering from
+ * @param string $todate
+ *   Date to start filtering to
+ * @param array $filters
+ *   Additional WHERE conditionals.
+ * @param string $date
+ *   User-supplied date.
+ *
+ * @return mixed
+ *   Returns array of objects or FALSE if no films found.
+ */
+function usergen_timeline_retrieve_data($content_fields, $date_field, $fromdate = '', $todate = '', $filters = '', $date = '') {
+
+  // Need to get some more info about the fields to do the DB lookup properly.
+  $date_flds = usergen_timeline_getfields($date_field);
+  $date_info = content_database_info($date_flds);
+  $date_table = $date_info['table'];
+  $date_keys = array_keys($date_flds['columns']);
+  $date_from_column = "{$date_info['columns'][$date_keys[0]]['column']}";
+  if (isset($date_keys[1])) {
+    $date_to_column = "{$date_info['columns'][$date_keys[1]]['column']}";
+  }
+  else {
+    $date_to_column = $date_from_column;
+  }
+
+  // Sanitize user input.
+  $date_sql = mysql_real_escape_string($date);
+
+  // Let's build a query!
+  $query = "
+    select
+      {node}.nid,
+      {node_revisions}.title,
+      {node_revisions}.body,
+      {$date_table}.{$date_from_column}";
+
+  if ($date_from_column <> $date_to_column) {
+    $query .= ", {$date_table}.{$date_to_column}";
+  }
+
+  $query .= "
+  from
+    {node},
+    {node_revisions},
+    {$date_table}
+  where
+    {$date_table}.{$date_from_column} >= '%s'
+    and
+    {$date_table}.{$date_to_column} <= '%s'
+    and
+      {node}.nid = {$date_table}.nid
+    and
+      {node}.language='en'
+    and
+      {node}.status = 1
+    and {node_revisions}.nid = {$date_table}.nid";
+
+  $results = db_query($query, mysql_real_escape_string($fromdate), mysql_real_escape_string($todate));
+
+
+  // Set up array to hold the event data. We'll transform this into JSON
+  // below.
+  $events = array();
+  $i = 0;
+
+  // OK, work through each event.
+  while ($record = db_fetch_array($results)) {
+
+    // Get a link to the node so we can add it to the 'link' attribute
+    // for the event.
+    $path = "/" . drupal_get_path_alias("node/{$record['nid']}");
+
+    // Is the i18n module installed?  Let's find out what language
+    // we're using.
+    if (function_exists('i18n_get_lang')) {
+      $lang = i18n_get_lang();
+    }
+    else {
+      $lang = "";
+    }
+    // Check to see if we're on a translation, and modify the link based
+    // on that translation.
+    if ($lang <> 'en' and $lang <> '') {
+      $tr_paths = translation_path_get_translations($path);
+      foreach ($tr_paths as $link_lang => $link) {
+        if ($link_lang == $lang) {
+          $path = $lang . "/" . drupal_get_path_alias($link);
+        }
+      }
+    }
+
+
+    // Build a description to add to the timeline event, based on the body text
+    // and add the date information to it.
+    $description = "<p><em>";
+    if ($record[$date_from_column] <> '') {
+      $description .= date("Y-m-d", strtotime($record[$date_from_column]));
+    }
+    if (isset($record[$date_to_column]) && $record[$date_to_column] <> $record[$date_from_column]) {
+      $description .= " to " . date("Y-m-d", strtotime($record[$date_to_column]));
+    }
+    $description .= "</em></p>";
+    $description .= "{$record['body']}";
+
+    // Simile timeline renders events differently based on the data supplied to
+    // it. If the start and end date are the same, it won't render a bullet/line
+    // on overview bands. So, if the start date and end date are the same, we
+    // need to drop the 'end' attribute for the event.
+    if (isset($record[$date_to_column]) && $record[$date_to_column] <> $record[$date_from_column]) {
+      $events[] = array(
+        'start' => $record[$date_from_column],
+        'end' => $record[$date_to_column],
+        'title' => $record['title'],
+        'description' => $description,
+        'link' => $path,
+      );
+    }
+    else {
+      $events[] = array(
+        'start' => $record[$date_from_column],
+        'title' => $record['title'],
+        'description' => $description,
+        'link' => $path,
+      );
+    }
+  }
+
+  // Encode the data into JSON.
+  $json_encoded = json_encode($events);
+
+  // Return the JSON data.
+  return $json_encoded;
+
+}
+
+
+/**
+ * Builds the Simile timeline javascript block and associated data.
+ *
+ * @param string $content_type
+ *   Content type to render.
+ * @param string $date_field
+ *   Date field(s) to use.
+ * @param string $fromdate
+ *   Date to generate timeline from
+ * @param string $todate
+ *   Date to generate timeline to
+ * @param array $filters
+ *   Additional fields to filter by (Currently unused).
+ *
+ * @return string
+ *   Page content for Drupal to render.
+ */
+function usergen_timeline_render($content_type, $date_field, $fromdate = '', $todate = '', $filters = '') {
+
+  // Check for month/date, and if none, set to Jan 1 of the given year.
+  if (!stristr($fromdate, '-') or stristr($fromdate, '/')) {
+    $fromdate = $fromdate . "-01-01";
+  }
+  // Check for month/date, and if none, set to Jan 1 of the given year.
+  if (!stristr($todate, '-') or stristr($todate, '/')) {
+    $todate = $todate . "-12-31";
+  }
+
+  // If there's no "from" date, let's build one based on today.
+  if ($fromdate == '') {
+    $fromdate = date("r");
+  }
+
+  // Focus the timeline on the first date so users don't have to scroll.
+  $focusdate = date("Y", strtotime($fromdate));
+
+
+  // Let's grab the timeline data in JSON format.
+  $data = usergen_timeline_retrieve_data($content_type, $date_field, $fromdate, $todate, $filters);
+
+  // Let's also grab the path so we can build URLs.
+  $path = "/" . drupal_get_path('module', 'usergen_timeline');
+
+  // Build the Javascript block for the timeline.
+  $utc_fromdate = date("Y,m,d,h,i,s", strtotime($fromdate));
+  $utc_todate = date("Y,m,d,h,i,s", strtotime($todate));
+
+  $jsblock = '
+    <script>
+        var tl;
+        function timeline_create(timeline_data) {
+        var eventSource1 = new Timeline.DefaultEventSource();
+        var tl_el = document.getElementById("timeline-gen")
+            var theme1 = Timeline.ClassicTheme.create();
+            theme1.autoWidth = true; // Set the Timeline width automatically.
+            theme1.autoWidthAnimationTime = 0;
+            theme1.timeline_start = new Date(Date.UTC(' . $utc_fromdate . '));
+            theme1.timeline_stop  = new Date(Date.UTC(' . $utc_todate . '));
+            theme1.event.bubble.width = 450;
+            var theme2 = Timeline.ClassicTheme.create();
+            theme2.timeline_start = new Date(Date.UTC(' . $utc_fromdate . '));
+            theme2.timeline_stop  = new Date(Date.UTC(' . $utc_todate . '));
+
+         var d = Timeline.DateTime.parseGregorianDateTime("' . $focusdate . '");
+         var bandInfos = [
+           Timeline.createBandInfo({
+               width:          "60%",
+               eventSource:    eventSource1,
+               intervalUnit:   Timeline.DateTime.MONTH,
+               theme:          theme1,
+               intervalPixels: 100,
+               date:           d
+           }),
+           Timeline.createBandInfo({
+               width:          "30%",
+               eventSource:    eventSource1,
+               intervalUnit:   Timeline.DateTime.YEAR,
+               overview:       true,
+               theme:          theme2,
+               intervalPixels: 50,
+           }),
+           Timeline.createBandInfo({
+               width:          "10%",
+               eventSource:    eventSource1,
+               intervalUnit:   Timeline.DateTime.DECADE,
+               overview:       true,
+               theme:          theme2,
+               intervalPixels: 40,
+           })
+         ];
+        bandInfos[1].syncWith = 0;
+        bandInfos[2].syncWith = 2;
+        bandInfos[2].syncWith = 1;
+        bandInfos[1].highlight = true;
+        bandInfos[2].highlight = true;
+        tl = Timeline.create(tl_el, bandInfos, Timeline.HORIZONTAL);
+        var url = \'.\'
+        eventSource1.loadJSON(timeline_data, url);
+        tl.layout();
+        }
+   </script>
+   ';
+
+  $output .= $jsblock;
+
+  // Gave to write the timeline widget to the screen, after all.
+  $output .= '<div id="timeline-gen"></div>
+    <script>
+        var timeline_data = {
+          "dateTimeFormat": "iso8601",
+          "events" : ' . $data . '
+        }
+      timeline_create(timeline_data);
+</script>
+<noscript>
+This page uses Javascript to show you a Timeline. Please enable Javascript in your browser to see the full page. Thank you.
+</noscript>';
+
+  return $output;
+
+}
+
+/**
+ * Displays timeline.
+ */
+function usergen_timeline_form_display() {
+
+  return drupal_get_form('usergen_timeline_form');
+
+}
+
+
+/**
+ * Implements hook_form().
+ *
+ * Builds the user-generated criteria form.
+ */
+function usergen_timeline_form($form_state) {
+
+  // Set up operators for form use.
+  $num_operators = array(
+    '<' => t('Less than'),
+    '>' => t('More than'),
+    '<=' => t('Less than or equal to'),
+    '>=' => t('Greater than or equal to'),
+    '=' => t('Equal to'),
+    '<>' => t('Not equal to'),
+  );
+  $str_operators = array(
+    '=' => t('Equal to'),
+    'LIKE' => t('Contains'),
+    'NOT LIKE' => t('Does not contain'),
+  );
+
+  // Get available content types.
+  $ugt_config['content_types'] = variable_get('usergen_timeline_contenttypes', array());
+  $contenttypes = array();
+  $alltypes = usergenviz_getcontenttypes();
+  foreach ($ugt_config['content_types'] as $type) {
+    $contenttypes[$type] = $alltypes[$type]['name'];
+  }
+
+  // Get available data sources.
+  $ugt_config['data_sources'] = variable_get('usergen_timeline_datasources', array());
+  foreach ($ugt_config['data_sources'] as $datasource) {
+    $field = field_info_field($datasource);
+    $datasources[$field['field_name']] = "{$field['widget']['label']} ({$alltypes[$field['type_name']]['name']})";
+  }
+
+  // Get available filter options.
+  $filters = array();
+  $ugt_config['filters'] = variable_get('usergen_timeline_filterfields', array());
+  foreach ($ugt_config['filters'] as $filter) {
+    $field = field_info_field($filter);
+    $filters[$field['field_name']] = "{$field['widget']['label']} ({$alltypes[$field['type_name']]['name']})";
+  }
+
+
+  // Start building the form.
+  $form = array();
+
+  // We want to redirect to the results page; otherwise the form will just
+  // reappear. this is a workaround for how Drupal uses the Form API, which is
+  // generally for modifying data in the database.
+  // One gotcha with this approach is that it uses GET, rather than POST, so we
+  // have to be careful what we expose to the end user.
+  if (isset($_REQUEST['sources'])) {
+    $params['sources'] = $_REQUEST['sources'];
+  }
+  if (isset($_REQUEST['types'])) {
+    $params['types'] = $_REQUEST['types'];
+  }
+  if (isset($_REQUEST['filter'])) {
+    $params['filter'] = $_REQUEST['filter'];
+  }
+  if (isset($_REQUEST['fromdate'])) {
+    $params['fromdate'] = $_REQUEST['fromdate'];
+  }
+  if (isset($_REQUEST['todate'])) {
+    $params['todate'] = $_REQUEST['todate'];
+  }
+
+  $form['#redirect'] = array('usergen/timeline/results', $params);
+
+  // Fieldset for content types.
+  $form['contenttypes'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Filter by content type'),
+    '#description' => t('Returns pages for the selected content types.'),
+  );
+
+  // We need to get key names from the array, since we don't know these
+  // ahead of time.
+  $contentkeys = array_keys($contenttypes);
+  // Give the user a list of content types to select from.
+  if (sizeof($contenttypes) > 1) {
+    $form['contenttypes']['types'] = array(
+      '#type' => 'select',
+      '#title' => t('Content types'),
+      '#options' => $contenttypes,
+      '#attributes' => array('size' => 4),
+      '#default_value' => $contentkeys[0],
+      '#size' => 1,
+    );
+  }
+  else {
+    // Only one of them, but we're still dealing with an array.
+    foreach ($contenttypes as $key => $val) {
+      // If there's only one, there's no sense putting it in a select box.
+      // just tell the user what they should expect to get back.
+      $form['contenttypes']['contenttype'] = array(
+        '#value' => sprintf(t('<p>Results will be returned for %s pages</p>'), $val),
+      );
+      $form['contenttypes']['types'] = array(
+        '#type' => 'hidden',
+        '#value' => $key,
+      );
+    }
+  }
+
+
+  // Fieldset for data sources.
+  $form['datasources'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Data Sources'),
+    '#description' => t('Select one of the following fields to query.'),
+  );
+
+  // !TODO: Figure out if the performance penalty can be worked around.
+  // give the user a list of data sources (date fields) to select from
+  // we can only use one, as multiple location fields incurs a huge database
+  // penalty.
+  // we need to get key names from the array, since we don't know these
+  // ahead of time.
+  $datakeys = array_keys($datasources);
+
+  $form['datasources']['sources'] = array(
+    '#type' => 'select',
+    '#title' => t('Sources'),
+    '#options' => $datasources,
+    '#default_value' => $datakeys[0],
+    '#attributes' => array('size' => 4),
+    '#size' => '1',
+  );
+
+  // Give the user the option to set a date range.
+  $form['datasources']['daterange'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Filter by date (optional)'),
+    '#description' => t('You can filter results on your timeline by entering values in the fields below. Use one of the following formats: YYYY or YY-MM-DD.'),
+  );
+  $form['datasources']['daterange']['fromdate'] = array(
+    '#type' => 'textfield',
+    '#title' => t('From'),
+    '#size' => '10',
+    '#prefix' => '<div class="inline-form">',
+    '#suffix' => '</div>',
+    '#default_value' => variable_get('usergen_timeline_fromdate', array()),
+    '#attributes' => array('style' => 'width: 150px;'),
+  );
+  $form['datasources']['daterange']['todate'] = array(
+    '#type' => 'textfield',
+    '#title' => t('to'),
+    '#size' => '10',
+    '#prefix' => '<div class="inline-form">',
+    '#suffix' => '</div>',
+    '#default_value' => variable_get('usergen_timeline_todate', array()),
+    '#attributes' => array('style' => 'width: 150px;'),
+  );
+
+  // Can't have a form without a submit button!
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Generate a timeline'),
+    '#submit' => 'usergen_timeline_resultpage',
+  );
+
+  // We're done! send it back.
+  return $form;
+
+}
+
+
+/**
+ * Implements hook_form_validate().
+ *
+ * Validates form contents so we don't break the visualization.
+ */
+function usergen_timeline_form_validate($form, $form_state) {
+
+  // Check that at least one data source is selected.
+  if (!isset($_REQUEST['sources']) or !is_string($_REQUEST['sources']) or $_REQUEST['sources == ""']) {
+    form_set_error('sources', t('Select a field to query.'));
+  }
+
+  // Check that at least one content type is selected.
+  if (!isset($_REQUEST['types']) or !is_string($_REQUEST['types']) or $_REQUEST['types'] == "") {
+    form_set_error('types', t('Select a content type to return pages for.'));
+  }
+
+  // Check that the from/to dates are valid.
+  if (isset($_REQUEST['fromdate']) && $_REQUEST['fromdate'] <> "") {
+    if (!strtotime($_REQUEST['fromdate'])) {
+      form_set_error('fromdate', t('Please enter a valid date value.'));
+    }
+  }
+  if (isset($_REQUEST['todate']) && $_REQUEST['todate'] <> "") {
+    if (!strtotime($_REQUEST['todate'])) {
+      form_set_error('todate', t('Please enter a valid date value.'));
+    }
+  }
+
+  // Check that filters are valid.
+  if (isset($_REQUEST['filter'])) {
+    if ($_REQUEST['filter']['field'] <> "0") {
+      // First, check that an operator was selected if a field was selected.
+      if ($_REQUEST['filter']['operator'] == "") {
+        form_set_error('filter][operator', t('Please select an operator'));
+      }
+      // Now, check for a value for the filter to compare against.
+      if ($_REQUEST['filter']['value'] == "") {
+        form_set_error('filter][value', t('Please enter a value for the filter.'));
+      }
+      // And let's check to see if the filter value is valid for the field type.
+      $type = usergen_timeline_getfields($_REQUEST['filter']['field']);
+      // Let's make sure it's a valid date.
+      if ($type['type'] == 'date') {
+        $testdata = strtotime($_REQUEST['filter']['value']);
+        if ($testdata === FALSE) {
+          form_set_error('filter][value', t('Please enter a valid date value.'));
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_form_submit().
+ *
+ * Handles form submission.
+ */
+function usergen_timeline_form_submit($form, $form_state) {
+  global $user;
+
+  $page_content = usergen_timeline_resultpage();
+
+  return $page_content;
+
+}
+
+/**
+ * Default page, displays criteria form to users.
+ */
+function usergen_timeline_defaultpage() {
+
+  $page_content = "";
+
+  // Get available content types.
+  $ugt_config['content_types'] = variable_get('usergen_timeline_contenttypes', array());
+  $contenttypes = array();
+  $alltypes = usergenviz_getcontenttypes();
+  foreach ($ugt_config['content_types'] as $type) {
+    $contenttypes[$type]['name'] = $alltypes[$type]['name'];
+  }
+
+  // Get available data sources.
+  $ugt_config['data_sources'] = variable_get('usergen_timeline_datasources', array());
+  $datasources = array();
+  foreach ($ugt_config['data_sources'] as $datasource) {
+    $field = field_info_field($datasource);
+    $datasources[$field['field_name']]['name'] = $field['widget']['label'];
+  }
+
+  // Get available filter options.
+  $filters = array();
+  $ugt_config['filters'] = variable_get('usergen_timeline_filterfields', array());
+  foreach ($ugt_config['filters'] as $filter) {
+    $field = field_info_field($filter);
+    $filters[$field['field_name']]['name'] = $field['widget']['label'];
+  }
+
+  // Title and help text are hidden in an array and not accessible directly.
+  $details_settings = variable_get('usergen_timeline_details', array());
+
+  // Get remaining configuration options.
+  $ugt_config['display_title'] = $details_settings['usergen_timeline_displaytitle'];
+  $ugt_config['page_title'] = $details_settings['usergen_timeline_title'];
+  $page_help = $details_settings['usergen_timeline_helptext']['text'];
+
+  // Render the help text.
+  if ($page_help <> '') {
+    $page_content .= "<p>" . $page_help . "</p>";
+  }
+
+  if (usergenviz_get_saved($user->uid, 'timeline')) {
+    $page_content .= '<p><a href="' . url('usergen/timeline/list') . '">' . t('View saved timelines') . "</a></p>";
+  }
+  // Render the form for user-supplied criteria.
+  $page_content .= drupal_get_form('usergen_timeline_form');
+
+  return $page_content;
+}
+
+
+/**
+ * Render the timeline, based on user-supplied criteria.
+ *
+ * @return string
+ *   Page content for Drupal to render
+ */
+function usergen_timeline_resultpage() {
+  // Load timeline javascripts.
+  usergen_timeline_include();
+  drupal_add_css(drupal_get_path('module', 'usergen_timeline') . "/usergen_timeline.css");
+
+  // Let's grab the data from the query.
+  $content_type = $_REQUEST['types'];
+  $date_field = $_REQUEST['sources'];
+  $filters = $_REQUEST['filter'];
+
+  // We need to grab readable names for the content types and fields so we can
+  // display these to the user.
+  $datasource = $_REQUEST['sources'];
+  $datasource_info = usergen_map_getfields($datasource);
+  $datasource_name = $datasource_info['widget']['label'];
+  // We don't need this anymore, let's unset to save memory.
+  unset($datasource_info);
+
+  $types = $_REQUEST['types'];
+  $alltypes = usergenviz_getcontenttypes();
+  $type_name = $alltypes[$types]['name'];
+  // We don't need this anymore, let's unset to save memory.
+  unset($alltypes);
+
+  // Get to and from dates if set.
+  if (isset($_REQUEST['fromdate']) && $_REQUEST['fromdate'] <> "") {
+    $tl_start = $_REQUEST['fromdate'];
+  }
+  else {
+    $tl_start = variable_get('usergen_timeline_fromdate', array());
+  }
+  if (isset($_REQUEST['todate']) && $_REQUEST['todate'] <> "") {
+    $tl_end = $_REQUEST['todate'];
+  }
+  else {
+    $tl_end = variable_get('usergen_timeline_todate', array());
+  }
+
+  // Get remaining configuration options.
+  $details_settings = variable_get('usergen_timeline_details', array());
+  $ugt_config['display_title'] = $details_settings['usergen_timeline_displaytitle'];
+  $ugt_config['page_title'] = $details_settings['usergen_timeline_title'];
+  $page_help = $details_settings['usergen_timeline_helptext']['text'];
+
+  // Now we have the data and config settings, let's build page content.
+  $page_content = "";
+
+  if ($ugt_config['display_title'] === '1') {
+    $page_content .= "<h2>" . $page_title . "</h2>";
+  }
+
+  // If the user has permission, build a link to save the results.
+  if (user_access('usergen_save_timelines')) {
+
+    // !TODO: Rewrite this as a form, so users can supply a name.
+    $savelinkparams = array(
+      'filters' => $filters,
+      'types' => $types,
+      'sources' => $datasource,
+      'fromdate' => $tl_start,
+      'todate' => $tl_end,
+      'token' => drupal_get_token('saveusergentimeline'),
+    );
+
+    // Check to see if we've already saved this timeline.
+    $save_exists = usergenviz_get_saved($user->uid, 'timeline', $savelinkparams);
+    if ($save_exists == FALSE) {
+      $savelink = '<a href="' . url('usergen/timeline/save') . '?' . http_build_query($savelinkparams) . '">' . t('Save this timeline') . '</a>';
+    }
+    else {
+      $savelink = '<a href="' . url('usergen/timeline/remove') . '?' . http_build_query($savelinkparams) . '">' . t('Forget this timeline') . '</a>';
+    }
+    if (usergenviz_get_saved($user->uid, 'timeline')) {
+      $savelink .= ' | <a href="' . url('usergen/timeline/list') . '">' . t('View saved timelines') . "</a>";
+    }
+    $page_content .= "<p>{$savelink}</p>";
+  }
+
+  $user_criteria = "<p>" . t('Displaying results for the following criteria:') . "<ul>
+    <li>" . t("Pages of type") . " " . $type_name . "</li>
+    <li>" . t('Data source:') . " " . $datasource_name . "</li>";
+  if (isset($filters) && $filters[$filters_keys[0]]['name'] <> "") {
+    $filters_keys = array_keys($filters);
+    $user_criteria .= "<li>" . t('Using filters') . ":<ul>";
+    foreach ($filters as $filter) {
+      $user_criteria .= "<li>{$filter['name']} {$filter['operator']} {$filter['value']}</li>";
+    }
+    $user_criteria .= "</ul></li>";
+  }
+  $user_criteria .= "</ul></p>";
+  $page_content .= $user_criteria;
+  $page_content .= '<p>' . t('Would you like to try again?') . ' <a href="' . url('usergen/timeline') . '">' . t('Build another timeline') . '</a></p>';
+  $page_content .= usergen_timeline_render($content_type, $date_field, $tl_start, $tl_end, $filters);
+
+  return $page_content;
+}
+
+/**
+ * Save a timeline to the database for a user and return them to the timeline.
+ *
+ * @param array $data
+ *   An array that contains the query parameters to rebuild the timeline.
+ */
+function usergen_timeline_save($data) {
+
+  if (drupal_valid_token($_REQUEST['token'])) {
+
+    // we're going to need the user object, so let's get that now.
+    global $user;
+
+    $savedata = array(
+      'filters' => $_REQUEST['filters'],
+      'types' => $_REQUEST['types'],
+      'sources' => $_REQUEST['sources'],
+      'fromdate' => $_REQUEST['fromdate'],
+      'todate' => $_REQUEST['todate'],
+    );
+
+    $save = array(
+      'uid' => $user->uid,
+      'usergen_timeline_saved_value' => $savedata,
+      'created' => date('Y-m-d h:i:s'),
+    );
+
+    // Check to see if we've already saved.
+    $exists = usergenviz_get_saved($user->uid, 'timeline', $savedata);
+
+    if (!$exists) {
+      // We can use drupal_write_record() here to safely save the data
+      // into the database. See API docs for drupal_write_record
+      if (drupal_write_record('usergen_timeline_saved', $save)) {
+        // Send them back to where they came from.
+        drupal_goto($_SERVER['HTTP_REFERER']);
+      }
+      else {
+        drupal_set_message(t('Could not save user timeline:'), 'error');
+      }
+    }
+    else {
+      $page_content = "";
+      drupal_set_message(t('Timeline was already saved.'));
+      return $page_content;
+    }
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Remove a saved timeline.
+ *
+ * @param string $data
+ *   Timeline to remove.
+ */
+function usergen_timeline_remove($data) {
+  // we're going to need the user object, so let's get that now.
+  global $user;
+
+  $savedata = array(
+    'filters' => $_REQUEST['filters'],
+    'types' => $_REQUEST['types'],
+    'sources' => $_REQUEST['sources'],
+    'fromdate' => $_REQUEST['fromdate'],
+    'todate' => $_REQUEST['todate'],
+  );
+
+  // There's no Drupal-safe function for removing records from
+  // the DB, so we'll have to build a query. This is changed in
+  // Drupal 7, see API documentation for db_delete.
+  // we have to do some jiggerypokery to make table prefixes work.
+  $query = "DELETE FROM {usergen_timeline_saved} WHERE uid = '%s' AND usergen_timeline_saved_value = '%s' ";
+  $query = Database::getConnection()->prefixTables($query);
+
+  $query = sprintf($query, $user->uid, serialize($savedata));
+
+  $query = db_delete('usergen_timeline_saved')
+    ->condition('uid', $user->uid, '=')
+    ->condition('usergen_timeline_saved_value', serialize($savedata), '=');
+
+
+  // We have to call _db_query() directly, since db_prefix_tables() will strip
+  // out the curly braces in our conditional.  This is going to cause issues
+  // with installs that use table prefixes.
+  if ($query->execute()) {
+    drupal_goto($_SERVER['HTTP_REFERER']);
+  }
+  else {
+    drupal_set_message(t('Could not remove timeline') . db_error());
+    drupal_goto($_SERVER['HTTP_REFERER']);
+  }
+}
+
+/**
+ * Lists all saved timelines for a user.
+ *
+ * @return string
+ *   Page contents.
+ */
+function usergen_timeline_list() {
+  global $user;
+  $page_contents = "";
+  $timelines = usergenviz_get_saved($user->uid, 'timeline');
+  $links = array();
+  foreach ($timelines as $timeline) {
+    $params = unserialize($timeline['usergen_timeline_saved_value']);
+
+    $url = url('usergen/timeline/results') . "?" . http_build_query($params);
+    $alltypes = usergenviz_getcontenttypes();
+    $type_name = $alltypes[$params['types']]['name'];
+    unset($alltypes);
+
+    $datasource_info = usergen_map_getfields($params['sources']);
+    $datasource_name = $datasource_info['widget']['label'];
+    unset($datasource_info);
+
+    $criteria = sprintf(t("Pages of type %s, using the data source %s"), $type_name, $datasource_name);
+    if (isset($params['fromdate'])) {
+      $criteria .= " " . sprintf(t("from %s"), $params['fromdate']);
+    }
+    if (isset($params['todate'])) {
+      $criteria .= " " . sprintf(t("to %s"), $params['todate']);
+    }
+
+    $links[$i]['save'] = '<a href="' . $url . '">' . $criteria . '</a>';
+    $links[$i]['delete'] = '<a href="' . url('usergen/timeline/remove') . '?' . http_build_query($params) . '" title="' . t('Forget this timeline') . '">[x]</a>';
+    $i++;
+  }
+
+  if (sizeof($links) > 0) {
+    $page_contents .= '<ul id="saved_timelines" class="list">';
+    foreach ($links as $link) {
+      $page_contents .= "<li>{$link['save']} {$link['delete']}</li>";
+    }
+    $page_contents .= "</ul>";
+  }
+  else {
+    $page_contents .= "<p>" . t('No saved timelines found.') . ' <a href="' . url('usergen/timeline') . '">' . t('Build another timeline') . '?</a></p>';
+  }
+
+  return $page_contents;
+
+}
+
+

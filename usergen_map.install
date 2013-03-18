@@ -1,0 +1,52 @@
+<?php
+/**
+ * @file
+ * Install file for user generated maps module.
+ */
+
+
+/*
+ * Builds scheme for usergen_map install/uninstall.  We want this data to be removed when the module is uninstalled.
+ *
+ * @return array Scheme expressed as an array.
+ */
+function usergen_map_schema() {
+  $schema['usergen_map_saved'] = array(
+    'description' => 'Base table for the usergen_map module to save user-generated maps.',
+    'fields' => array(
+      'vid' => array(
+        'description' => 'Unique identifier for the saved bookmark',
+        'type' => 'int',
+        'not null' => TRUE,
+        'auto_increment' => TRUE,
+        ),
+      'uid' => array(
+        'description' => 'User ID for the saved map',
+        'type' => 'int',
+        'not null' => TRUE,
+        ),
+      'usergen_map_saved_title' => array(
+        'description' => 'Title for the saved map',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => FALSE,
+        'default' => 'Saved map',
+        ),
+      'created' => array(
+        'description' => 'Date the map was saved.',
+        'type' => 'datetime',
+        'not null' => FALSE,
+        ),
+      'usergen_map_saved_value' => array(
+        'description' => 'JSON-encoded array of filter options',
+        'type' => 'text',
+        'not null' => TRUE,
+        ),
+      ),
+    'primary key' => array('vid'),
+    );
+
+  return $schema;
+
+} // end usergen_map_schema();
+
